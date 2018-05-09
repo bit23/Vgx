@@ -1,0 +1,61 @@
+[
+  {
+    "outputFileName": "build/Vgx-0.0.1.js",
+    "inputFiles": [
+
+      "src/VgxLib.js",
+
+      "src/Cgx/Cgx-0.0.1.code-bundle.js",
+
+      "src/Extra/Events.js",
+      "src/Extra/Collection.js",
+      "src/Extra/HttpClient.js",
+
+      "src/Vgx/Utils.js",
+      "src/Vgx/MathUtils.js",
+      "src/Vgx/Shadow.js",
+      "src/Vgx/Point2D.js",
+      "src/Vgx/Rect.js",
+      "src/Vgx/EntityTransform.js",
+      "src/Vgx/ViewTransform.js",
+      "src/Vgx/PointDefinition.js",
+      "src/Vgx/PointDefinitions.js",
+      "src/Vgx/DrawingContext.js",
+      "src/Vgx/TextUtils.js",
+      "src/Vgx/Vars.js",
+      "src/Vgx/DrawingLoader.js",
+
+      "src/Vgx/objectModel/IFillable.js",
+      "src/Vgx/objectModel/VgxObject.js",
+      "src/Vgx/objectModel/Drawable.js",
+      "src/Vgx/objectModel/Entity.js",
+      "src/Vgx/objectModel/Drawing.js",
+      "src/Vgx/objectModel/IFillable.js",
+      "src/Vgx/objectModel/Arc.js",
+      "src/Vgx/objectModel/Circle.js",
+      "src/Vgx/objectModel/CubicCurve.js",
+      "src/Vgx/objectModel/Donut.js",
+      "src/Vgx/objectModel/Ellipse.js",
+      "src/Vgx/objectModel/Group.js",
+      "src/Vgx/objectModel/Image.js",
+      "src/Vgx/objectModel/Line.js",
+      "src/Vgx/objectModel/Path.js",
+      "src/Vgx/objectModel/Pie.js",
+      "src/Vgx/objectModel/Polygon.js",
+      "src/Vgx/objectModel/Polyline.js",
+      "src/Vgx/objectModel/Quad.js",
+      "src/Vgx/objectModel/QuadraticCurve.js",
+      "src/Vgx/objectModel/Rectangle.js",
+      "src/Vgx/objectModel/Square.js",
+      "src/Vgx/objectModel/Text.js",
+      "src/Vgx/objectModel/Triangle.js",
+
+      "src/Vgx/ui/Viewport.js",
+      "src/Vgx/ui/ViewportOrientation.js",
+      "src/Vgx/ui/VectorGraphicsView.js",
+      "src/Vgx/ui/ViewportsLayout.js",
+
+      "src/Exports.js"
+    ]
+  }
+]
