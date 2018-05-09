@@ -57,3 +57,8 @@ Vgx/ui
     ViewportsLayout  
     Viewport  
     VectorGraphicsView  
+
+Extra  
+
+    Collection
+    HttpClient  
