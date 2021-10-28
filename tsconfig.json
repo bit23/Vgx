@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "None",
+        "declaration": true,
+        "noImplicitAny": true,
+        "strict": false,
+        "removeComments": true,
+        "moduleResolution": "Node",
+        "experimentalDecorators": true,
+        "sourceMap": true,
+        "inlineSourceMap": false,
+        "inlineSources": true,
+		"outFile": "dist/vgx.js",
+		"forceConsistentCasingInFileNames": true,
+        "types": ["node", "offscreencanvas"]
+    },
+    "include": [
+        "src/**/*",
+		"sample-apps/**/*"
+    ]
+}

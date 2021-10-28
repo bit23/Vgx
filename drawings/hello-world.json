@@ -1,0 +1,18 @@
+﻿{
+  "version":  "0.0.1",
+  "children": [
+    [
+      "Text",
+      {
+        "insertPointX": 100,
+        "insertPointY": 100,
+        "stroke": "orange",
+        "strokeWidth": 0.7,
+        "fill": "cyan",
+        "fontFamily": "Arial",
+        "fontSize": 20,
+        "source": "Hello World"
+      }
+    ]
+  ]
+}
