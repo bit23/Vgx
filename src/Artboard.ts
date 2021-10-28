@@ -1,5 +1,5 @@
 
-/// <reference path="ReactiveObject.ts" />
+/// <reference path="core/ReactiveObject.ts" />
 
 
 namespace Vgx {

@@ -20,6 +20,26 @@ namespace Vgx {
 			this._values = [];
 		}
 
+
+		public get count() {
+			return this._keys.length;
+		}
+
+		public get first() {
+			if (this._values.length == 0) {
+				return undefined;
+			}
+			return this._values[0];
+		}
+
+		public get last() {
+			if (this._values.length == 0) {
+				return undefined;
+			}
+			return this._values[this._values.length - 1];
+		}
+
+
 		public containsKey(key: TKey) {
 			return this._keys.indexOf(key) >= 0;
 		}

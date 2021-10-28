@@ -183,7 +183,7 @@ namespace SampleApps {
 			this._selectDrawing = window.document.querySelector("#selectDrawing");
 			this._selectDrawing.addEventListener("change", (e) => {
 				var args = this._selectDrawing.value.split("|");
-				this._loadDrawing(args[0], args[1]);
+				this._loadDrawing(args[0], args[1]).catch();
 			});
 	
 			this._selectBackground = window.document.querySelector("#selectBackground");
@@ -213,9 +213,9 @@ namespace SampleApps {
 			var optionParts = this._selectDrawing.options[0].value.split("|");
 			var url = optionParts[0];
 			var type = optionParts[1];
-			this._loadDrawing(url, type);
+			this._loadDrawing(url, type).catch(() => this._onWindowResize());
 
-			this._onWindowResize();
+			//this._onWindowResize();
 		}
 
 		private _fillSelectInputs() {
@@ -268,28 +268,53 @@ namespace SampleApps {
 			viewport.htmlElement.appendChild(viewportMenu.htmlElement);
 		}
 
-		private _loadDrawing(url: string, type: "script" | "json" | string) {
-	
-			Vgx.HttpClient.downloadString(url, (s, e) => {
-				var drawing;
-				if (type == "script") {
-					drawing = Vgx.Drawing.fromScript(e.result);
-				} else {
-					drawing = Vgx.Drawing.fromJSON(e.result);
-				}
-				if (drawing.background) {
-					var option = document.createElement("option");
-					option.value = <any>drawing.background;
-					option.innerText = <any>drawing.background;
-					this._selectBackground.options.add(option);
-					this._selectBackground.selectedIndex = this._selectBackground.options.length - 1;
-				} else {
-					drawing.background = this._selectBackground.options[0].value;
-				}
+		private _resolveImporter(fullTypeName: string) {
+			const f = new Function(`return new ${fullTypeName}()`);
+			return f() as Vgx.Importer;
+		}
 
-				this._vectorGraphicsView.drawing = drawing;
-				//this._vectorGraphicsView.currentViewport.zoomAll();
-			});
+		private async _loadDrawing(url: string, type: "script" | "json" | string) {
+
+			// Vgx.HttpClient.downloadString(url, (s, e) => {
+			// 	var drawing;
+			// 	if (type == "script") {
+			// 		drawing = Vgx.Drawing.fromScript(e.result);
+			// 	} else {
+			// 		drawing = Vgx.Drawing.fromJSON(e.result);
+			// 	}
+			// 	if (drawing.background) {
+			// 		var option = document.createElement("option");
+			// 		option.value = <any>drawing.background;
+			// 		option.innerText = <any>drawing.background;
+			// 		this._selectBackground.options.add(option);
+			// 		this._selectBackground.selectedIndex = this._selectBackground.options.length - 1;
+			// 	} else {
+			// 		drawing.background = this._selectBackground.options[0].value;
+			// 	}
+
+			// 	this._vectorGraphicsView.drawing = drawing;
+			// 	//this._vectorGraphicsView.currentViewport.zoomAll();
+			// });
+
+			debugger;
+
+			const importerType = Vgx.ImportersManager.getTypeOrDefault(type);
+			const importer = this._resolveImporter(importerType.typeName);
+			if (!importer) {
+				throw new Error("importer not loaded");
+			}
+
+			const drawing = await importer.loadFile(url);
+			if (drawing.background) {
+				var option = document.createElement("option");
+				option.value = <any>drawing.background;
+				option.innerText = <any>drawing.background;
+				this._selectBackground.options.add(option);
+				this._selectBackground.selectedIndex = this._selectBackground.options.length - 1;
+			} else {
+				drawing.background = this._selectBackground.options[0].value;
+			}
+			this._vectorGraphicsView.drawing = drawing;
 		}
 	}
 }

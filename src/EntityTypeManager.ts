@@ -1,5 +1,5 @@
 
-/// <reference path="DictionaryObject.ts" />
+/// <reference path="core/DictionaryObject.ts" />
 
 
 namespace Vgx {

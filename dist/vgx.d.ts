@@ -34,42 +34,6 @@ declare namespace Vgx {
     }
 }
 declare namespace Vgx {
-    class Collection<TElement extends any> implements Iterable<TElement> {
-        private _items;
-        constructor();
-        [Symbol.iterator](): Iterator<TElement, any, undefined>;
-        protected _getItems(): ReadonlyArray<TElement>;
-        add(item: TElement): number;
-        addRange(items: TElement[]): number;
-        elementAt(index: number): TElement;
-        indexOf(value: any, selector?: (x: TElement) => any): number;
-        toArray(): TElement[];
-        get count(): number;
-        protected _onClearCompleted(items: TElement[]): void;
-        protected _onInsertCompleted(index: number, items: TElement[]): void;
-        protected _onRemoveCompleted(index: number, items: TElement[]): void;
-        clear(): void;
-        insert(index: number, item: TElement): number;
-        insertRange(index: number, items: TElement[]): number;
-        remove(value: any, selector?: (x: TElement) => any): boolean;
-        removeAt(index: number): TElement;
-        removeAny(predicate: (x: TElement) => boolean): any[];
-    }
-}
-declare namespace Vgx {
-    class DictionaryObject<TKey extends any, TValue extends any> implements Iterable<KeyValuePair<TKey, TValue>> {
-        static fromObject(obj: DynamicObject): DictionaryObject<string | symbol, any>;
-        private _keys;
-        private _values;
-        constructor();
-        containsKey(key: TKey): boolean;
-        remove(key: TKey): boolean;
-        get(key: TKey): TValue;
-        set(key: TKey, value: TValue): void;
-        [Symbol.iterator](): Iterator<KeyValuePair<TKey, TValue>, any, undefined>;
-    }
-}
-declare namespace Vgx {
     class Drawing {
         static fromJSON(json: string): Drawing;
         static fromScript(script: string): Drawing;
@@ -174,6 +138,22 @@ declare namespace Vgx {
     }
 }
 declare namespace Vgx {
+    class DictionaryObject<TKey extends any, TValue extends any> implements Iterable<KeyValuePair<TKey, TValue>> {
+        static fromObject(obj: DynamicObject): DictionaryObject<string | symbol, any>;
+        private _keys;
+        private _values;
+        constructor();
+        get count(): number;
+        get first(): TValue;
+        get last(): TValue;
+        containsKey(key: TKey): boolean;
+        remove(key: TKey): boolean;
+        get(key: TKey): TValue;
+        set(key: TKey, value: TValue): void;
+        [Symbol.iterator](): Iterator<KeyValuePair<TKey, TValue>, any, undefined>;
+    }
+}
+declare namespace Vgx {
     interface EntityTypeDefinition {
         name: string;
         typeName: string;
@@ -185,65 +165,6 @@ declare namespace Vgx {
         static getType(name: string, throwException?: boolean): EntityTypeDefinition;
     }
     export {};
-}
-declare namespace Vgx {
-    interface EventArgs {
-        [name: string]: any;
-    }
-    type EventHandler<TOwner, TArgs> = (sender: TOwner, eventArgs: TArgs) => void;
-    interface EventOptions {
-        once: boolean;
-    }
-    interface EventGroup<T, TArgs> {
-        eventName: string;
-        entries: Array<EventEntry<T, TArgs>>;
-    }
-    interface EventEntry<T, TArgs> {
-        handler: EventHandler<T, TArgs>;
-        options: EventOptions;
-        bindTarget: any;
-    }
-    interface IEventSet<TOwner, TArgs> {
-        add(handler: EventHandler<TOwner, TArgs>): void;
-        once(handler: EventHandler<TOwner, TArgs>): void;
-        remove(handler: EventHandler<TOwner, TArgs>): void;
-        has(handler: EventHandler<TOwner, TArgs>): boolean;
-        trigger(args?: TArgs): void;
-        stop(): void;
-        resume(): void;
-    }
-    class EventSet<TOwner, TArgs> implements IEventSet<TOwner, TArgs> {
-        private _eventsManager;
-        private _eventName;
-        private _bindTarget;
-        constructor(eventGroup: EventsManager, eventName: string, bindTarget?: any);
-        add(handler: EventHandler<TOwner, TArgs>, bindTarget?: any): void;
-        once(handler: EventHandler<TOwner, TArgs>): void;
-        remove(handler: EventHandler<TOwner, TArgs>): void;
-        has(handler: EventHandler<TOwner, TArgs>): boolean;
-        trigger(args?: TArgs): void;
-        stop(): void;
-        resume(): void;
-    }
-    class EventsManager {
-        private readonly _owner;
-        private readonly _validEventOptions;
-        private _events;
-        private _disabledEventsNames;
-        constructor(owner: any);
-        private getHandlerEntryIndex;
-        attach<TArgs>(eventName: string, eventHandler: EventHandler<any, TArgs>, eventOptions?: EventOptions, bindTarget?: any): void;
-        detach<TArgs>(eventName: string, eventHandler: EventHandler<any, TArgs>): void;
-        trigger<TArgs>(eventName: string, args?: TArgs): void;
-        getHandlersCount(eventName: string): number;
-        hasHandler<TArgs>(eventName: string, eventHandler: EventHandler<any, TArgs>): boolean;
-        stop(eventName?: string): void;
-        resume(eventName?: string): void;
-        create<TArgs>(eventName: string): EventSet<any, TArgs>;
-        createEventArgs(data?: {
-            [name: string]: any;
-        }): EventArgs;
-    }
 }
 declare namespace Vgx {
 }
@@ -292,27 +213,6 @@ declare namespace Vgx {
         private static _type2;
         static get type1(): PointDefinition;
         static get type2(): PointDefinition;
-    }
-}
-declare namespace Vgx {
-    enum CollectionChangedAction {
-        Added = 0,
-        Removed = 1,
-        Cleared = 2
-    }
-    interface CollectionChangedArgs<TElement extends any> extends EventArgs {
-        readonly action: CollectionChangedAction;
-        readonly index: number;
-        readonly items: TElement[];
-    }
-    class ReactiveCollection<TElement extends any> extends Collection<TElement> {
-        private readonly _events;
-        constructor();
-        private _raiseCollectionChanged;
-        readonly onCollectionChanged: EventSet<ReactiveCollection<TElement>, CollectionChangedArgs<TElement>>;
-        protected _onClearCompleted(items: TElement[]): void;
-        protected _onInsertCompleted(index: number, items: TElement[]): void;
-        protected _onRemoveCompleted(index: number, items: TElement[]): void;
     }
 }
 declare namespace Vgx {
@@ -469,6 +369,151 @@ declare namespace Vgx {
         setViewTarget(tx: number, ty: number): void;
         setViewZoom(value: number): void;
         setViewZoomTo(value: number, tx: number, ty: number): void;
+    }
+}
+declare namespace Vgx {
+    class Collection<TElement extends any> implements Iterable<TElement> {
+        private _items;
+        constructor();
+        [Symbol.iterator](): Iterator<TElement, any, undefined>;
+        protected _getItems(): ReadonlyArray<TElement>;
+        add(item: TElement): number;
+        addRange(items: TElement[]): number;
+        elementAt(index: number): TElement;
+        indexOf(value: any, selector?: (x: TElement) => any): number;
+        toArray(): TElement[];
+        get count(): number;
+        protected _onClearCompleted(items: TElement[]): void;
+        protected _onInsertCompleted(index: number, items: TElement[]): void;
+        protected _onRemoveCompleted(index: number, items: TElement[]): void;
+        clear(): void;
+        insert(index: number, item: TElement): number;
+        insertRange(index: number, items: TElement[]): number;
+        remove(value: any, selector?: (x: TElement) => any): boolean;
+        removeAt(index: number): TElement;
+        removeAny(predicate: (x: TElement) => boolean): any[];
+    }
+}
+declare namespace Vgx {
+    interface EventArgs {
+        [name: string]: any;
+    }
+    type EventHandler<TOwner, TArgs> = (sender: TOwner, eventArgs: TArgs) => void;
+    interface EventOptions {
+        once: boolean;
+    }
+    interface EventGroup<T, TArgs> {
+        eventName: string;
+        entries: Array<EventEntry<T, TArgs>>;
+    }
+    interface EventEntry<T, TArgs> {
+        handler: EventHandler<T, TArgs>;
+        options: EventOptions;
+        bindTarget: any;
+    }
+    interface IEventSet<TOwner, TArgs> {
+        add(handler: EventHandler<TOwner, TArgs>): void;
+        once(handler: EventHandler<TOwner, TArgs>): void;
+        remove(handler: EventHandler<TOwner, TArgs>): void;
+        has(handler: EventHandler<TOwner, TArgs>): boolean;
+        trigger(args?: TArgs): void;
+        stop(): void;
+        resume(): void;
+    }
+    class EventSet<TOwner, TArgs> implements IEventSet<TOwner, TArgs> {
+        private _eventsManager;
+        private _eventName;
+        private _bindTarget;
+        constructor(eventGroup: EventsManager, eventName: string, bindTarget?: any);
+        add(handler: EventHandler<TOwner, TArgs>, bindTarget?: any): void;
+        once(handler: EventHandler<TOwner, TArgs>): void;
+        remove(handler: EventHandler<TOwner, TArgs>): void;
+        has(handler: EventHandler<TOwner, TArgs>): boolean;
+        trigger(args?: TArgs): void;
+        stop(): void;
+        resume(): void;
+    }
+    class EventsManager {
+        private readonly _owner;
+        private readonly _validEventOptions;
+        private _events;
+        private _disabledEventsNames;
+        constructor(owner: any);
+        private getHandlerEntryIndex;
+        attach<TArgs>(eventName: string, eventHandler: EventHandler<any, TArgs>, eventOptions?: EventOptions, bindTarget?: any): void;
+        detach<TArgs>(eventName: string, eventHandler: EventHandler<any, TArgs>): void;
+        trigger<TArgs>(eventName: string, args?: TArgs): void;
+        getHandlersCount(eventName: string): number;
+        hasHandler<TArgs>(eventName: string, eventHandler: EventHandler<any, TArgs>): boolean;
+        stop(eventName?: string): void;
+        resume(eventName?: string): void;
+        create<TArgs>(eventName: string): EventSet<any, TArgs>;
+        createEventArgs(data?: {
+            [name: string]: any;
+        }): EventArgs;
+    }
+}
+declare namespace Vgx {
+    enum CollectionChangedAction {
+        Added = 0,
+        Removed = 1,
+        Cleared = 2
+    }
+    interface CollectionChangedArgs<TElement extends any> extends EventArgs {
+        readonly action: CollectionChangedAction;
+        readonly index: number;
+        readonly items: TElement[];
+    }
+    class ReactiveCollection<TElement extends any> extends Collection<TElement> {
+        private readonly _events;
+        constructor();
+        private _raiseCollectionChanged;
+        readonly onCollectionChanged: EventSet<ReactiveCollection<TElement>, CollectionChangedArgs<TElement>>;
+        protected _onClearCompleted(items: TElement[]): void;
+        protected _onInsertCompleted(index: number, items: TElement[]): void;
+        protected _onRemoveCompleted(index: number, items: TElement[]): void;
+    }
+}
+declare namespace Vgx {
+    abstract class Importer {
+        abstract load(source: any): Promise<Drawing>;
+        loadFile(url: string): Promise<Drawing>;
+    }
+}
+declare namespace Vgx {
+    interface ImporterDefinition {
+        name: string;
+        typeName: string;
+        mimeTypes: string[];
+        defaultValues: DynamicObject;
+    }
+    export class ImportersManager {
+        private static _defaultType;
+        private static _registeredTypes;
+        static registerType(name: string, typeName: string, mimeTypes?: string[], defaultValues?: DynamicObject): void;
+        static registerTypeAsDefault(name: string, typeName: string, mimeTypes?: string[], defaultValues?: DynamicObject): void;
+        static getDefault(): ImporterDefinition;
+        static getType(name: string, throwException?: boolean): ImporterDefinition;
+        static getTypeOrDefault(name: string): ImporterDefinition;
+    }
+    export {};
+}
+declare namespace Vgx {
+    class JsonImporter extends Importer {
+        load(source: any): Promise<Drawing>;
+    }
+}
+declare namespace Vgx {
+    class ScriptImporter extends Importer {
+        load(source: any): Promise<Drawing>;
+    }
+}
+declare namespace Vgx {
+    class SvgImporter {
+        constructor();
+        private loadSvgFile;
+        private loadSvgCode;
+        loadSvg(svg: string): Promise<Drawing>;
     }
 }
 declare namespace Vgx {
@@ -1161,6 +1206,7 @@ declare namespace SampleApps {
         private _onWindowResize;
         private _onViewportsLayoutChanged;
         private _addViewportMenu;
+        private _resolveImporter;
         private _loadDrawing;
     }
 }

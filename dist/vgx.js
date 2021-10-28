@@ -68,183 +68,6 @@ var Vgx;
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
-    class Collection {
-        constructor() {
-            this._items = [];
-        }
-        *[Symbol.iterator]() {
-            yield* this._items;
-        }
-        _getItems() {
-            return this._items;
-        }
-        add(item) {
-            return this.insert(this._items.length - 1, item);
-        }
-        addRange(items) {
-            return this.insertRange(this._items.length - 1, items);
-        }
-        elementAt(index) {
-            return this._items[index];
-        }
-        indexOf(value, selector = null) {
-            if (typeof selector === "function") {
-                let result = -1;
-                let i = 0;
-                for (const element of this._items) {
-                    if (selector(element) === value) {
-                        result = i;
-                        break;
-                    }
-                    i++;
-                }
-                return result;
-            }
-            else {
-                return this._items.indexOf(value);
-            }
-        }
-        toArray() {
-            return this._items.slice(0);
-        }
-        get count() { return this._items.length; }
-        _onClearCompleted(items) { }
-        _onInsertCompleted(index, items) { }
-        _onRemoveCompleted(index, items) { }
-        clear() {
-            const oldItems = this._items;
-            this._items = [];
-            this._onClearCompleted(oldItems);
-        }
-        insert(index, item) {
-            if (index < 0)
-                index = 0;
-            if (index >= this._items.length)
-                index = this._items.length;
-            if (index === this._items.length) {
-                this._items.push(item);
-            }
-            else {
-                this._items.splice(index, 0, item);
-            }
-            this._onInsertCompleted(index, [item]);
-            return index;
-        }
-        insertRange(index, items) {
-            let i;
-            if (index < 0)
-                index = 0;
-            if (index >= this._items.length)
-                index = this._items.length;
-            if (index === this._items.length) {
-                for (const item of items) {
-                    this._items.push(item);
-                }
-            }
-            else {
-                this._items.splice(index, 0, ...items);
-            }
-            if (this._items.length > index) {
-                this._onInsertCompleted(index, items);
-            }
-            return index;
-        }
-        remove(value, selector = null) {
-            let itemIndex = this.indexOf(value, selector);
-            if (itemIndex === -1) {
-                return false;
-            }
-            const deletedItems = this._items.splice(itemIndex, 1);
-            this._onRemoveCompleted(itemIndex, deletedItems);
-            return true;
-        }
-        removeAt(index) {
-            if (index < 0 || index >= this._items.length) {
-                return null;
-            }
-            const deletedItems = this._items.splice(index, 1);
-            this._onRemoveCompleted(index, deletedItems);
-            return deletedItems[0];
-        }
-        removeAny(predicate) {
-            let deletedItems = [];
-            let index = -1;
-            let i = 0;
-            for (const element of this._items) {
-                if (predicate(element)) {
-                    deletedItems.push(element);
-                    if (index < 0) {
-                        index = i;
-                    }
-                    this._items.splice(i, 1);
-                }
-                i++;
-            }
-            if (deletedItems.length > 0) {
-                this._onRemoveCompleted(index, deletedItems);
-            }
-            return deletedItems;
-        }
-    }
-    Vgx.Collection = Collection;
-})(Vgx || (Vgx = {}));
-var Vgx;
-(function (Vgx) {
-    class DictionaryObject {
-        constructor() {
-            this._keys = [];
-            this._values = [];
-        }
-        static fromObject(obj) {
-            const result = new DictionaryObject();
-            for (const k of Reflect.ownKeys(obj)) {
-                result.set(k, Reflect.get(obj, k));
-            }
-            return result;
-        }
-        containsKey(key) {
-            return this._keys.indexOf(key) >= 0;
-        }
-        remove(key) {
-            const index = this._keys.indexOf(key);
-            if (index < 0) {
-                return false;
-            }
-            this._keys.splice(index, 1);
-            this._values.splice(index, 1);
-            return true;
-        }
-        get(key) {
-            const index = this._keys.indexOf(key);
-            if (index < 0) {
-                return undefined;
-            }
-            return this._values[index];
-        }
-        set(key, value) {
-            const index = this._keys.indexOf(key);
-            if (index < 0) {
-                this._keys.push(key);
-                this._values.push(value);
-            }
-            else {
-                this._values[index] = value;
-            }
-        }
-        *[Symbol.iterator]() {
-            let i = 0;
-            while (i == this._keys.length) {
-                yield {
-                    key: this._keys[i],
-                    value: this._values[i]
-                };
-            }
-        }
-    }
-    Vgx.DictionaryObject = DictionaryObject;
-})(Vgx || (Vgx = {}));
-var Vgx;
-(function (Vgx) {
     class Drawing {
         constructor() {
             this._isDirty = true;
@@ -755,6 +578,76 @@ var Vgx;
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
+    class DictionaryObject {
+        constructor() {
+            this._keys = [];
+            this._values = [];
+        }
+        static fromObject(obj) {
+            const result = new DictionaryObject();
+            for (const k of Reflect.ownKeys(obj)) {
+                result.set(k, Reflect.get(obj, k));
+            }
+            return result;
+        }
+        get count() {
+            return this._keys.length;
+        }
+        get first() {
+            if (this._values.length == 0) {
+                return undefined;
+            }
+            return this._values[0];
+        }
+        get last() {
+            if (this._values.length == 0) {
+                return undefined;
+            }
+            return this._values[this._values.length - 1];
+        }
+        containsKey(key) {
+            return this._keys.indexOf(key) >= 0;
+        }
+        remove(key) {
+            const index = this._keys.indexOf(key);
+            if (index < 0) {
+                return false;
+            }
+            this._keys.splice(index, 1);
+            this._values.splice(index, 1);
+            return true;
+        }
+        get(key) {
+            const index = this._keys.indexOf(key);
+            if (index < 0) {
+                return undefined;
+            }
+            return this._values[index];
+        }
+        set(key, value) {
+            const index = this._keys.indexOf(key);
+            if (index < 0) {
+                this._keys.push(key);
+                this._values.push(value);
+            }
+            else {
+                this._values[index] = value;
+            }
+        }
+        *[Symbol.iterator]() {
+            let i = 0;
+            while (i == this._keys.length) {
+                yield {
+                    key: this._keys[i],
+                    value: this._values[i]
+                };
+            }
+        }
+    }
+    Vgx.DictionaryObject = DictionaryObject;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
     class EntityTypeManager {
         static registerType(name, typeName, defaultValues = null) {
             if (this._registeredTypes.containsKey(name)) {
@@ -777,179 +670,6 @@ var Vgx;
     }
     EntityTypeManager._registeredTypes = new Vgx.DictionaryObject();
     Vgx.EntityTypeManager = EntityTypeManager;
-})(Vgx || (Vgx = {}));
-var Vgx;
-(function (Vgx) {
-    ;
-    class EventSet {
-        constructor(eventGroup, eventName, bindTarget) {
-            this._bindTarget = bindTarget;
-            this._eventsManager = eventGroup;
-            this._eventName = eventName;
-        }
-        add(handler, bindTarget) {
-            this._eventsManager.attach(this._eventName, handler, { once: false }, bindTarget || this._bindTarget);
-        }
-        once(handler) {
-            this._eventsManager.attach(this._eventName, handler, { once: true }, this._bindTarget);
-        }
-        remove(handler) {
-            this._eventsManager.detach(this._eventName, handler);
-        }
-        has(handler) {
-            return this._eventsManager.hasHandler(this._eventName, handler);
-        }
-        trigger(args) {
-            this._eventsManager.trigger(this._eventName, args);
-        }
-        stop() {
-            this._eventsManager.stop(this._eventName);
-        }
-        resume() {
-            this._eventsManager.resume(this._eventName);
-        }
-    }
-    Vgx.EventSet = EventSet;
-    class EventsManager {
-        constructor(owner) {
-            this._validEventOptions = ["once"];
-            this._disabledEventsNames = [];
-            this._owner = owner;
-            this._events = new Map();
-        }
-        getHandlerEntryIndex(evntGroup, eventHandler) {
-            var positions = evntGroup.entries.map((v, i) => v.handler === eventHandler ? i : -1).filter(v => v >= 0);
-            if (positions.length == 0) {
-                return -1;
-            }
-            return positions[0];
-        }
-        attach(eventName, eventHandler, eventOptions, bindTarget) {
-            if (typeof eventHandler !== "function") {
-                return;
-            }
-            let lowerEventName = eventName.toLowerCase();
-            let eventEntry = {
-                handler: eventHandler,
-                options: eventOptions,
-                bindTarget: bindTarget
-            };
-            if (this._events.has(lowerEventName)) {
-                let eventGroupEntry = this._events.get(lowerEventName);
-                eventGroupEntry.entries.push(eventEntry);
-            }
-            else {
-                let eventGroupEntry = {
-                    eventName: eventName,
-                    entries: [eventEntry]
-                };
-                this._events.set(lowerEventName, eventGroupEntry);
-            }
-        }
-        detach(eventName, eventHandler) {
-            if (typeof eventHandler !== "function") {
-                return;
-            }
-            let lowerEventName = eventName.toLowerCase();
-            if (!this._events.has(lowerEventName)) {
-                return;
-            }
-            let eventGroupEntry = this._events.get(lowerEventName);
-            let entryIndex = this.getHandlerEntryIndex(eventGroupEntry, eventHandler);
-            if (entryIndex >= 0) {
-                eventGroupEntry.entries.splice(entryIndex, 1);
-            }
-        }
-        trigger(eventName, args) {
-            var lowerEventName = eventName.toLowerCase();
-            if (!this._events.has(lowerEventName)) {
-                return;
-            }
-            let eventGroupEntry = this._events.get(lowerEventName);
-            var disabledEventIndex = this._disabledEventsNames.indexOf(lowerEventName);
-            if (disabledEventIndex !== -1 || this._disabledEventsNames.indexOf("*") !== -1)
-                return;
-            let handlersToDetach = [];
-            for (let eventEntry of eventGroupEntry.entries) {
-                let handler = eventEntry.handler;
-                if (eventEntry.bindTarget) {
-                    handler = eventEntry.handler.bind(eventEntry.bindTarget);
-                }
-                let removeAfter = false;
-                if (eventEntry.options && "once" in eventEntry.options) {
-                    removeAfter = !!eventEntry.options.once;
-                }
-                handler(this._owner, args);
-                if (removeAfter) {
-                    handlersToDetach.push(handler);
-                }
-            }
-            for (let detachableHandler of handlersToDetach) {
-                this.detach(eventName, detachableHandler);
-            }
-        }
-        getHandlersCount(eventName) {
-            let lowerEventName = eventName.toLowerCase();
-            if (!this._events.has(lowerEventName)) {
-                return 0;
-            }
-            return this._events.get(lowerEventName).entries.length;
-        }
-        hasHandler(eventName, eventHandler) {
-            if (typeof eventHandler !== "function") {
-                return false;
-            }
-            let lowerEventName = eventName.toLowerCase();
-            if (!this._events.has(lowerEventName)) {
-                return false;
-            }
-            let eventGroupEntry = this._events.get(lowerEventName);
-            return this.getHandlerEntryIndex(eventGroupEntry, eventHandler) >= 0;
-        }
-        stop(eventName) {
-            if (typeof eventName === "undefined") {
-                this._disabledEventsNames = ["*"];
-            }
-            else if (typeof eventName === "string") {
-                var eventIndex = this._disabledEventsNames.indexOf(eventName.toLowerCase());
-                if (eventIndex != -1)
-                    return;
-                this._disabledEventsNames.push(eventName.toLowerCase());
-            }
-        }
-        resume(eventName) {
-            if (typeof eventName === "undefined") {
-                this._disabledEventsNames = [];
-            }
-            else if (typeof eventName === "string") {
-                var eventIndex = this._disabledEventsNames.indexOf(eventName.toLowerCase());
-                if (eventIndex == -1)
-                    return;
-                this._disabledEventsNames.splice(eventIndex, 1);
-            }
-        }
-        create(eventName) {
-            var eventGroupObj = new EventSet(this, eventName);
-            var descriptor = {
-                enumerable: true,
-                value: eventGroupObj
-            };
-            if (!(eventName in this._owner)) {
-                Object.defineProperty(this._owner, eventName, descriptor);
-            }
-            return eventGroupObj;
-        }
-        createEventArgs(data) {
-            var result = {};
-            if (typeof data === "object") {
-                for (let k in Object.keys(data)) {
-                    result[k] = data[k];
-                }
-            }
-            return result;
-        }
-    }
-    Vgx.EventsManager = EventsManager;
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -1147,39 +867,6 @@ var Vgx;
         }
     ]);
     Vgx.PointDefinitions = PointDefinitions;
-})(Vgx || (Vgx = {}));
-var Vgx;
-(function (Vgx) {
-    let CollectionChangedAction;
-    (function (CollectionChangedAction) {
-        CollectionChangedAction[CollectionChangedAction["Added"] = 0] = "Added";
-        CollectionChangedAction[CollectionChangedAction["Removed"] = 1] = "Removed";
-        CollectionChangedAction[CollectionChangedAction["Cleared"] = 2] = "Cleared";
-    })(CollectionChangedAction = Vgx.CollectionChangedAction || (Vgx.CollectionChangedAction = {}));
-    class ReactiveCollection extends Vgx.Collection {
-        constructor() {
-            super();
-            this._events = new Vgx.EventsManager(this);
-            this.onCollectionChanged = new Vgx.EventSet(this._events, "onCollectionChanged");
-        }
-        _raiseCollectionChanged(action, index, items) {
-            this._events.trigger("onCollectionChanged", {
-                action,
-                index,
-                items
-            });
-        }
-        _onClearCompleted(items) {
-            this._raiseCollectionChanged(CollectionChangedAction.Cleared, 0, items);
-        }
-        _onInsertCompleted(index, items) {
-            this._raiseCollectionChanged(CollectionChangedAction.Added, index, items);
-        }
-        _onRemoveCompleted(index, items) {
-            this._raiseCollectionChanged(CollectionChangedAction.Removed, index, items);
-        }
-    }
-    Vgx.ReactiveCollection = ReactiveCollection;
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -1584,6 +1271,479 @@ var Vgx;
         }
     }
     Vgx.ViewTransform = ViewTransform;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class Collection {
+        constructor() {
+            this._items = [];
+        }
+        *[Symbol.iterator]() {
+            yield* this._items;
+        }
+        _getItems() {
+            return this._items;
+        }
+        add(item) {
+            return this.insert(this._items.length - 1, item);
+        }
+        addRange(items) {
+            return this.insertRange(this._items.length - 1, items);
+        }
+        elementAt(index) {
+            return this._items[index];
+        }
+        indexOf(value, selector = null) {
+            if (typeof selector === "function") {
+                let result = -1;
+                let i = 0;
+                for (const element of this._items) {
+                    if (selector(element) === value) {
+                        result = i;
+                        break;
+                    }
+                    i++;
+                }
+                return result;
+            }
+            else {
+                return this._items.indexOf(value);
+            }
+        }
+        toArray() {
+            return this._items.slice(0);
+        }
+        get count() { return this._items.length; }
+        _onClearCompleted(items) { }
+        _onInsertCompleted(index, items) { }
+        _onRemoveCompleted(index, items) { }
+        clear() {
+            const oldItems = this._items;
+            this._items = [];
+            this._onClearCompleted(oldItems);
+        }
+        insert(index, item) {
+            if (index < 0)
+                index = 0;
+            if (index >= this._items.length)
+                index = this._items.length;
+            if (index === this._items.length) {
+                this._items.push(item);
+            }
+            else {
+                this._items.splice(index, 0, item);
+            }
+            this._onInsertCompleted(index, [item]);
+            return index;
+        }
+        insertRange(index, items) {
+            let i;
+            if (index < 0)
+                index = 0;
+            if (index >= this._items.length)
+                index = this._items.length;
+            if (index === this._items.length) {
+                for (const item of items) {
+                    this._items.push(item);
+                }
+            }
+            else {
+                this._items.splice(index, 0, ...items);
+            }
+            if (this._items.length > index) {
+                this._onInsertCompleted(index, items);
+            }
+            return index;
+        }
+        remove(value, selector = null) {
+            let itemIndex = this.indexOf(value, selector);
+            if (itemIndex === -1) {
+                return false;
+            }
+            const deletedItems = this._items.splice(itemIndex, 1);
+            this._onRemoveCompleted(itemIndex, deletedItems);
+            return true;
+        }
+        removeAt(index) {
+            if (index < 0 || index >= this._items.length) {
+                return null;
+            }
+            const deletedItems = this._items.splice(index, 1);
+            this._onRemoveCompleted(index, deletedItems);
+            return deletedItems[0];
+        }
+        removeAny(predicate) {
+            let deletedItems = [];
+            let index = -1;
+            let i = 0;
+            for (const element of this._items) {
+                if (predicate(element)) {
+                    deletedItems.push(element);
+                    if (index < 0) {
+                        index = i;
+                    }
+                    this._items.splice(i, 1);
+                }
+                i++;
+            }
+            if (deletedItems.length > 0) {
+                this._onRemoveCompleted(index, deletedItems);
+            }
+            return deletedItems;
+        }
+    }
+    Vgx.Collection = Collection;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    ;
+    class EventSet {
+        constructor(eventGroup, eventName, bindTarget) {
+            this._bindTarget = bindTarget;
+            this._eventsManager = eventGroup;
+            this._eventName = eventName;
+        }
+        add(handler, bindTarget) {
+            this._eventsManager.attach(this._eventName, handler, { once: false }, bindTarget || this._bindTarget);
+        }
+        once(handler) {
+            this._eventsManager.attach(this._eventName, handler, { once: true }, this._bindTarget);
+        }
+        remove(handler) {
+            this._eventsManager.detach(this._eventName, handler);
+        }
+        has(handler) {
+            return this._eventsManager.hasHandler(this._eventName, handler);
+        }
+        trigger(args) {
+            this._eventsManager.trigger(this._eventName, args);
+        }
+        stop() {
+            this._eventsManager.stop(this._eventName);
+        }
+        resume() {
+            this._eventsManager.resume(this._eventName);
+        }
+    }
+    Vgx.EventSet = EventSet;
+    class EventsManager {
+        constructor(owner) {
+            this._validEventOptions = ["once"];
+            this._disabledEventsNames = [];
+            this._owner = owner;
+            this._events = new Map();
+        }
+        getHandlerEntryIndex(evntGroup, eventHandler) {
+            var positions = evntGroup.entries.map((v, i) => v.handler === eventHandler ? i : -1).filter(v => v >= 0);
+            if (positions.length == 0) {
+                return -1;
+            }
+            return positions[0];
+        }
+        attach(eventName, eventHandler, eventOptions, bindTarget) {
+            if (typeof eventHandler !== "function") {
+                return;
+            }
+            let lowerEventName = eventName.toLowerCase();
+            let eventEntry = {
+                handler: eventHandler,
+                options: eventOptions,
+                bindTarget: bindTarget
+            };
+            if (this._events.has(lowerEventName)) {
+                let eventGroupEntry = this._events.get(lowerEventName);
+                eventGroupEntry.entries.push(eventEntry);
+            }
+            else {
+                let eventGroupEntry = {
+                    eventName: eventName,
+                    entries: [eventEntry]
+                };
+                this._events.set(lowerEventName, eventGroupEntry);
+            }
+        }
+        detach(eventName, eventHandler) {
+            if (typeof eventHandler !== "function") {
+                return;
+            }
+            let lowerEventName = eventName.toLowerCase();
+            if (!this._events.has(lowerEventName)) {
+                return;
+            }
+            let eventGroupEntry = this._events.get(lowerEventName);
+            let entryIndex = this.getHandlerEntryIndex(eventGroupEntry, eventHandler);
+            if (entryIndex >= 0) {
+                eventGroupEntry.entries.splice(entryIndex, 1);
+            }
+        }
+        trigger(eventName, args) {
+            var lowerEventName = eventName.toLowerCase();
+            if (!this._events.has(lowerEventName)) {
+                return;
+            }
+            let eventGroupEntry = this._events.get(lowerEventName);
+            var disabledEventIndex = this._disabledEventsNames.indexOf(lowerEventName);
+            if (disabledEventIndex !== -1 || this._disabledEventsNames.indexOf("*") !== -1)
+                return;
+            let handlersToDetach = [];
+            for (let eventEntry of eventGroupEntry.entries) {
+                let handler = eventEntry.handler;
+                if (eventEntry.bindTarget) {
+                    handler = eventEntry.handler.bind(eventEntry.bindTarget);
+                }
+                let removeAfter = false;
+                if (eventEntry.options && "once" in eventEntry.options) {
+                    removeAfter = !!eventEntry.options.once;
+                }
+                handler(this._owner, args);
+                if (removeAfter) {
+                    handlersToDetach.push(handler);
+                }
+            }
+            for (let detachableHandler of handlersToDetach) {
+                this.detach(eventName, detachableHandler);
+            }
+        }
+        getHandlersCount(eventName) {
+            let lowerEventName = eventName.toLowerCase();
+            if (!this._events.has(lowerEventName)) {
+                return 0;
+            }
+            return this._events.get(lowerEventName).entries.length;
+        }
+        hasHandler(eventName, eventHandler) {
+            if (typeof eventHandler !== "function") {
+                return false;
+            }
+            let lowerEventName = eventName.toLowerCase();
+            if (!this._events.has(lowerEventName)) {
+                return false;
+            }
+            let eventGroupEntry = this._events.get(lowerEventName);
+            return this.getHandlerEntryIndex(eventGroupEntry, eventHandler) >= 0;
+        }
+        stop(eventName) {
+            if (typeof eventName === "undefined") {
+                this._disabledEventsNames = ["*"];
+            }
+            else if (typeof eventName === "string") {
+                var eventIndex = this._disabledEventsNames.indexOf(eventName.toLowerCase());
+                if (eventIndex != -1)
+                    return;
+                this._disabledEventsNames.push(eventName.toLowerCase());
+            }
+        }
+        resume(eventName) {
+            if (typeof eventName === "undefined") {
+                this._disabledEventsNames = [];
+            }
+            else if (typeof eventName === "string") {
+                var eventIndex = this._disabledEventsNames.indexOf(eventName.toLowerCase());
+                if (eventIndex == -1)
+                    return;
+                this._disabledEventsNames.splice(eventIndex, 1);
+            }
+        }
+        create(eventName) {
+            var eventGroupObj = new EventSet(this, eventName);
+            var descriptor = {
+                enumerable: true,
+                value: eventGroupObj
+            };
+            if (!(eventName in this._owner)) {
+                Object.defineProperty(this._owner, eventName, descriptor);
+            }
+            return eventGroupObj;
+        }
+        createEventArgs(data) {
+            var result = {};
+            if (typeof data === "object") {
+                for (let k in Object.keys(data)) {
+                    result[k] = data[k];
+                }
+            }
+            return result;
+        }
+    }
+    Vgx.EventsManager = EventsManager;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    let CollectionChangedAction;
+    (function (CollectionChangedAction) {
+        CollectionChangedAction[CollectionChangedAction["Added"] = 0] = "Added";
+        CollectionChangedAction[CollectionChangedAction["Removed"] = 1] = "Removed";
+        CollectionChangedAction[CollectionChangedAction["Cleared"] = 2] = "Cleared";
+    })(CollectionChangedAction = Vgx.CollectionChangedAction || (Vgx.CollectionChangedAction = {}));
+    class ReactiveCollection extends Vgx.Collection {
+        constructor() {
+            super();
+            this._events = new Vgx.EventsManager(this);
+            this.onCollectionChanged = new Vgx.EventSet(this._events, "onCollectionChanged");
+        }
+        _raiseCollectionChanged(action, index, items) {
+            this._events.trigger("onCollectionChanged", {
+                action,
+                index,
+                items
+            });
+        }
+        _onClearCompleted(items) {
+            this._raiseCollectionChanged(CollectionChangedAction.Cleared, 0, items);
+        }
+        _onInsertCompleted(index, items) {
+            this._raiseCollectionChanged(CollectionChangedAction.Added, index, items);
+        }
+        _onRemoveCompleted(index, items) {
+            this._raiseCollectionChanged(CollectionChangedAction.Removed, index, items);
+        }
+    }
+    Vgx.ReactiveCollection = ReactiveCollection;
+})(Vgx || (Vgx = {}));
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var Vgx;
+(function (Vgx) {
+    class Importer {
+        loadFile(url) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(url);
+                const text = yield response.text();
+                return this.load(text);
+            });
+        }
+    }
+    Vgx.Importer = Importer;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class ImportersManager {
+        static registerType(name, typeName, mimeTypes = null, defaultValues = null) {
+            if (this._registeredTypes.containsKey(name)) {
+                throw new Error(`importer '${name}' already defined`);
+            }
+            const definition = { name, typeName, mimeTypes, defaultValues };
+            this._registeredTypes.set(name, definition);
+        }
+        static registerTypeAsDefault(name, typeName, mimeTypes = null, defaultValues = null) {
+            this.registerType(name, typeName, mimeTypes, defaultValues);
+            this._defaultType = this._registeredTypes.get(name);
+        }
+        static getDefault() {
+            if (this._defaultType) {
+                return this._defaultType;
+            }
+            if (this._registeredTypes.count > 0) {
+                return this._registeredTypes.first;
+            }
+            return null;
+        }
+        static getType(name, throwException = false) {
+            if (!this._registeredTypes.containsKey(name)) {
+                if (throwException) {
+                    throw new Error(`type '${name}' doesn't exists`);
+                }
+                else {
+                    return null;
+                }
+            }
+            return this._registeredTypes.get(name);
+        }
+        static getTypeOrDefault(name) {
+            let type = this.getType(name, false);
+            if (!type) {
+                type = this.getDefault();
+            }
+            return type;
+        }
+    }
+    ImportersManager._registeredTypes = new Vgx.DictionaryObject();
+    Vgx.ImportersManager = ImportersManager;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class JsonImporter extends Vgx.Importer {
+        load(source) {
+            return new Promise((resolve, reject) => {
+                try {
+                    let drawing;
+                    if (typeof (source) === "string") {
+                        const jobject = JSON.parse(source);
+                        drawing = Vgx.DrawingLoader.loadFromObject(jobject);
+                    }
+                    else if (typeof (source) === "object") {
+                        drawing = Vgx.DrawingLoader.loadFromObject(source);
+                    }
+                    else {
+                        throw new Error(`unexpected type ${typeof (source)}`);
+                    }
+                    resolve(drawing);
+                }
+                catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    }
+    Vgx.JsonImporter = JsonImporter;
+    Vgx.ImportersManager.registerTypeAsDefault("json", "Vgx.JsonImporter", ["application/json"]);
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class ScriptImporter extends Vgx.Importer {
+        load(source) {
+            return new Promise((resolve, reject) => {
+                try {
+                    var drawing = new Vgx.Drawing();
+                    const func = new Function("drawing", source);
+                    func.call(null, drawing);
+                    resolve(drawing);
+                }
+                catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    }
+    Vgx.ScriptImporter = ScriptImporter;
+    Vgx.ImportersManager.registerType("script", "Vgx.ScriptImporter", ["text/javascript "]);
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class SvgImporter {
+        constructor() {
+        }
+        loadSvgFile(url) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(url);
+                const svgCode = yield response.text();
+                return this.loadSvgCode(svgCode);
+            });
+        }
+        loadSvgCode(svgCode) {
+            const result = new Vgx.Drawing();
+            const parser = new DOMParser();
+            const document = parser.parseFromString(svgCode, "image/svg+xml");
+            return result;
+        }
+        loadSvg(svg) {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (svg.startsWith('<')) {
+                    return this.loadSvgCode(svg);
+                }
+                return this.loadSvgFile(svg);
+            });
+        }
+    }
+    Vgx.SvgImporter = SvgImporter;
+    Vgx.ImportersManager.registerType("svg", "Vgx.SvgImporter", ["image/svg+xml"]);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -3789,7 +3949,7 @@ var SampleApps;
             this._selectDrawing = window.document.querySelector("#selectDrawing");
             this._selectDrawing.addEventListener("change", (e) => {
                 var args = this._selectDrawing.value.split("|");
-                this._loadDrawing(args[0], args[1]);
+                this._loadDrawing(args[0], args[1]).catch();
             });
             this._selectBackground = window.document.querySelector("#selectBackground");
             this._selectBackground.addEventListener("change", (e) => {
@@ -3804,8 +3964,7 @@ var SampleApps;
             var optionParts = this._selectDrawing.options[0].value.split("|");
             var url = optionParts[0];
             var type = optionParts[1];
-            this._loadDrawing(url, type);
-            this._onWindowResize();
+            this._loadDrawing(url, type).catch(() => this._onWindowResize());
         }
         _fillSelectInputs() {
             const createOption = (text, value) => {
@@ -3844,15 +4003,19 @@ var SampleApps;
             var viewportMenu = new ViewportMenu(viewport);
             viewport.htmlElement.appendChild(viewportMenu.htmlElement);
         }
+        _resolveImporter(fullTypeName) {
+            const f = new Function(`return new ${fullTypeName}()`);
+            return f();
+        }
         _loadDrawing(url, type) {
-            Vgx.HttpClient.downloadString(url, (s, e) => {
-                var drawing;
-                if (type == "script") {
-                    drawing = Vgx.Drawing.fromScript(e.result);
+            return __awaiter(this, void 0, void 0, function* () {
+                debugger;
+                const importerType = Vgx.ImportersManager.getTypeOrDefault(type);
+                const importer = this._resolveImporter(importerType.typeName);
+                if (!importer) {
+                    throw new Error("importer not loaded");
                 }
-                else {
-                    drawing = Vgx.Drawing.fromJSON(e.result);
-                }
+                const drawing = yield importer.loadFile(url);
                 if (drawing.background) {
                     var option = document.createElement("option");
                     option.value = drawing.background;
