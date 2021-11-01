@@ -76,5 +76,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Triangle", "Vgx.VgxTriangle");
+	EntityTypeManager.registerType("Triangle", VgxTriangle);
 }

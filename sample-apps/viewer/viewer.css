@@ -26,32 +26,64 @@ select {
     background-color: #111;
     color: #ccc;
     border: 0;
-    border-top: 1px solid #000;
-    border-radius: 4px;
-    padding: 6px;
+    border: 1px solid #855cad;
+    border-radius: 2px;
+    padding: 4px 6px;
 }
 
 
+/* -------------------------------------- APP -------------------------------------- */
+
+.app-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+.main-view {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    border-bottom: 1px solid #855cad;
+}
+
+
+/* -------------------------------------- MENU -------------------------------------- */
+
 .menuBar {
+    flex-grow: 0;
     background-color: #2c2c2c;
     width: 100%;
-    position: fixed;
-    z-index: 999;
-    padding: 5px;
-    border-bottom: 1px solid #006caa
+    padding: 8px;
+    border-bottom: 1px solid #855cad;
+}
+
+.menuBar > .menuGroup {
+    margin-left: 20px;
 }
 
 .menuGroup {
     display: inline-block;
-    margin: 4px 10px;
-    vertical-align: middle;
     white-space: nowrap;
+}
+
+.menu-group-element {
+    background-color: rgba(60,60,60, 0.6);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+.menu-group-element:hover {
+    background-color: rgba(32,32,32, 0.9);
 }
 
 .menuGroupButtons {
     flex-grow: 1;
     text-align: right;
-    margin-right: -4px;
+    padding-right: 10px;
 }
 
 .menuElement {
@@ -60,7 +92,12 @@ select {
 }
 
 .menuElement.label {
+    font-size: 0.9em;
     margin-right: 4px;
+}
+
+.input[type="checkbox"].menuElement {
+    padding-right: 0px;
 }
 
 .menuButton {
@@ -70,47 +107,53 @@ select {
     min-width: 36px;
     background-position: center center;
     background-repeat: no-repeat;
-    background-color: #202020;
+    background-color: rgba(32,32,32,0.8);
     border: 0;
-    border-bottom: 1px solid #1a1a1a;
-    border-radius: 2px;
-    margin-right: 3px;
+    border-radius: 6px;
+    margin-left: 6px;
     padding: 6px;
+    border: 1px solid #855cad;
+}
+.menuButton:hover {
+    background-color: rgba(32,32,32,0.9);
 }
 
-.mainView {
+
+.content-view {
+    flex-grow: 1;
+}
+
+.side-view {
+    background-color: rebeccapurple;
+    height: 100%;
+    /* flex-basis: 200px; */
+    min-width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.vector-graphics-view {
+    position: relative;
+    background-color: #333333;
     height: 100%;
 }
 
 
-.VectorGraphicsView {
-    position: relative;
-    background-color: #333333;
-}
-
-
-.viewport {
-    background-color: #111111;
-    position: relative;
-}
-
-.viewport > canvas {
-
-}
-
 .viewportMenu {
-    background-color: #2c2c2c;
+    /*background-color: #2c2c2c;*/
     position: absolute;
     bottom: 0px;
     left: 0px;
     right: 0px;
     z-index: 999;
-    padding: 0 5px;
-    border-top: 1px solid #006caa;
-    border-bottom: 1px solid #006caa;
+    padding: 10px;
+    /*border-top: 1px solid #006caa;
+    border-bottom: 1px solid #006caa;*/
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-end;
 }
 
 .viewportMenu > .separator {
@@ -129,4 +172,144 @@ select {
 
 .select-drawing {
 	min-width: 150px;
+}
+
+
+
+/* -------------------------------------- LAYOUT -------------------------------------- */
+
+.app-layout {
+    flex-grow: 1;
+}
+
+.app-layout > .vector-graphics-view {
+    overflow: hidden;
+    display: flex;
+}
+
+.layout1 {
+    flex-direction: row;
+}
+
+.layout1 > .viewport-spacer {
+    display: none;
+}
+
+.layout2 {
+    flex-direction: row;
+}
+
+.layout2 > .viewport-spacer {
+    display: block;
+    height: unset;
+    width: 5px;
+    background-color: red;
+}
+
+.layout3 {
+    flex-direction: column;
+}
+
+.layout3 > .viewport-spacer {
+    display: block;
+    height: 5px;
+    width: unset;
+    background-color: red;
+}
+
+.viewport-spacer {
+    z-index: 1;
+}
+
+.viewport {
+    background-color: #111111;
+    position: relative;
+    flex-grow: 1;
+}
+
+.viewport > canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+
+
+.drawing-structure-view {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.drawing-structure-content {
+
+}
+
+
+.drawing-node {
+
+}
+
+.drawing-node-header {
+    padding: 4px 10px;
+    /* background-color: rgba(255,255,255,0.1); */
+    white-space: nowrap;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    border-bottom: 1px solid #855cad;
+    border-top: 1px solid #855cad;
+    margin-top: -1px;
+}
+
+.drawing-node-header > .text {
+    font-size: 0.9em;
+    flex-grow: 1;
+}
+
+
+
+.drawing-node-header > .expander {
+    padding-right: 10px;
+    visibility: hidden;
+}
+
+.drawing-node-header > .expander > .expanded {
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: none;
+}
+.drawing-node-header > .expander > .collapsed {
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: block;
+}
+
+
+
+.drawing-node-header > .buttons {
+    padding-left: 10px;
+}
+
+
+.drawing-node-header > .buttons.hidden > .visible {
+    display: none;
+}
+.drawing-node-header > .buttons.hidden > .hidden {
+    display: block;
+}
+
+.drawing-node-header > .buttons > .visible {
+    cursor: pointer;
+    display: block;
+}
+.drawing-node-header > .buttons > .hidden {
+    cursor: pointer;
+    display: none;
+    opacity: 0.5;
+}
+
+.drawing-node > .drawing-node-children {
+    padding-left: 20px;
+    display: none;
 }

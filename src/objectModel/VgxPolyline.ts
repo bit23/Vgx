@@ -59,5 +59,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Polyline", "Vgx.VgxPolyline");
+	EntityTypeManager.registerType("Polyline", VgxPolyline);
 }

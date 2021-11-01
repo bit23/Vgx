@@ -14,5 +14,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Polygon", "Vgx.VgxPolygon");
+	EntityTypeManager.registerType("Polygon", VgxPolygon);
 }

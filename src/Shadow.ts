@@ -27,6 +27,14 @@ namespace Vgx {
 			super();
 		}
 
+		public clone() {
+            const result = new Shadow();
+            result._blur = this._blur;
+            result._color = this._color;
+            result._offsetX = this._offsetX;
+            result._offsetY = this._offsetY;
+            return result;
+        }
 
 		public get blur () { return this._blur; }
         public set blur (v: number) {

@@ -78,6 +78,14 @@ namespace Vgx {
 			return this._bounds;
 		}
 
+		// override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			super._copyMembersValues(destination);
+			(destination as VgxPath)._fillRule = this._fillRule;
+			for (const path2D of this._children) {
+				(destination as VgxPath)._children.addRange(this._children.toArray());
+			}
+		}
 
 		private updateBounds() {
 			// TODO
@@ -244,5 +252,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Path", "Vgx.VgxPath");
+	EntityTypeManager.registerType("Path", VgxPath);
 }

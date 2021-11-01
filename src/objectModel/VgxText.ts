@@ -96,5 +96,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Text", "Vgx.VgxText");
+	EntityTypeManager.registerType("Text", VgxText);
 }

@@ -20,11 +20,13 @@ namespace Vgx {
 
         constructor() {
             this._htmlElement = window.document.createElement("div");
-            this._htmlElement.classList.add("VectorGraphicsView");
-            this._htmlElement.style.width = "100%";
-            this._htmlElement.style.height = "100%";
+            this._htmlElement.classList.add("vector-graphics-view");
+            this._htmlElement.classList.add("layout1");
+            // this._htmlElement.style.width = "100%";
+            // this._htmlElement.style.height = "100%";
 			this.onViewportsLayoutChanged = new EventSet<VectorGraphicsView, ViewportsLayout>(this._events, "onViewportsLayoutChanged");
             this._addNewViewport();
+            this._addViewportSpacer();
             window.addEventListener("resize", () => this._arrangeLayout());
         }
 
@@ -33,37 +35,52 @@ namespace Vgx {
                 return;
             switch (this._viewportsLayout) {
                 case ViewportsLayout.ONE:
+                    this._htmlElement.classList.add("layout1");
+                    this._htmlElement.classList.remove("layout2");
+                    this._htmlElement.classList.remove("layout3");
                     break;
                 case ViewportsLayout.TWO_VERTICAL:
                     {
-                        var width = (this._htmlElement.offsetWidth - this._viewportsSpace) * 0.5;
-                        var height = this._htmlElement.offsetHeight;
-                        var viewportLeft = this._viewports[0];
-                        viewportLeft.width = width;
-                        viewportLeft.height = height;
-                        var viewportRight = this._viewports[1];
-                        viewportRight.width = width;
-                        viewportRight.height = height;
-                        viewportRight.htmlElement.style.left = (width + this._viewportsSpace) + "px";
-                        viewportRight.htmlElement.style.top = "0px";
+                        // var width = (this._htmlElement.offsetWidth - this._viewportsSpace) * 0.5;
+                        // var height = this._htmlElement.offsetHeight;
+                        // var viewportLeft = this._viewports[0];
+                        // viewportLeft.width = width;
+                        // viewportLeft.height = height;
+                        // var viewportRight = this._viewports[1];
+                        // viewportRight.width = width;
+                        // viewportRight.height = height;
+                        // viewportRight.htmlElement.style.left = (width + this._viewportsSpace) + "px";
+                        // viewportRight.htmlElement.style.top = "0px";
+                        this._htmlElement.classList.remove("layout1");
+                        this._htmlElement.classList.add("layout2");
+                        this._htmlElement.classList.remove("layout3");
                     }
                     break;
                 case ViewportsLayout.TWO_HORIZONTAL:
                     {
-                        var width = this._htmlElement.offsetWidth;
-                        var height = (this._htmlElement.offsetHeight - this._viewportsSpace) * 0.5;
-                        var viewportTop = this._viewports[0];
-                        viewportTop.width = width;
-                        viewportTop.height = height;
-                        var viewportBottom = this._viewports[1];
-                        viewportBottom.width = width;
-                        viewportBottom.height = height;
-                        viewportBottom.htmlElement.style.left = "0px";
-                        viewportBottom.htmlElement.style.top = (height + this._viewportsSpace) + "px";
+                        // var width = this._htmlElement.offsetWidth;
+                        // var height = (this._htmlElement.offsetHeight - this._viewportsSpace) * 0.5;
+                        // var viewportTop = this._viewports[0];
+                        // viewportTop.width = width;
+                        // viewportTop.height = height;
+                        // var viewportBottom = this._viewports[1];
+                        // viewportBottom.width = width;
+                        // viewportBottom.height = height;
+                        // viewportBottom.htmlElement.style.left = "0px";
+                        // viewportBottom.htmlElement.style.top = (height + this._viewportsSpace) + "px";
+                        this._htmlElement.classList.remove("layout1");
+                        this._htmlElement.classList.remove("layout2");
+                        this._htmlElement.classList.add("layout3");
                     }
                     break;
             }
             this._neverArranged = false;
+        }
+
+        private _addViewportSpacer() {
+            const spacer = document.createElement("div");
+            spacer.classList.add("viewport-spacer");
+            this._htmlElement.appendChild(spacer);
         }
 
         private _addNewViewport() {
@@ -132,18 +149,18 @@ namespace Vgx {
                 case 1://ViewportsLayout.ONE:
                     {
                         this._ensureViewportsCount(1);
-                        this._viewports[0].htmlElement.style.position = "relative";
-                        this._viewports[0].autosize = true;
+                        //this._viewports[0].htmlElement.style.position = "relative";
+                        //this._viewports[0].autosize = true;
                     }
                     break;
                 case 2: //ViewportsLayout.TWO_VERTICAL:
                 case 3://ViewportsLayout.TWO_HORIZONTAL:
                     {
                         this._ensureViewportsCount(2);
-                        this._viewports[0].htmlElement.style.position = "absolute";
-                        this._viewports[0].autosize = false;
-                        this._viewports[1].htmlElement.style.position = "absolute";
-                        this._viewports[1].autosize = false;
+                        // this._viewports[0].htmlElement.style.position = "relative";
+                        // this._viewports[0].autosize = false;
+                        // this._viewports[1].htmlElement.style.position = "relative";
+                        // this._viewports[1].autosize = false;
                     }
                     break;
             }

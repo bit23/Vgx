@@ -20,12 +20,25 @@ namespace Vgx {
 			return new Rect(x, y, w, h);
 		}
 
+		// override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			super._copyMembersValues(destination);
+			(destination as VgxCircle)._radius = this._radius;
+		}
+
 
 		//abstract override
 		public _getPath(): Path2D {
 			// TODO
 			return null;
 		}
+
+		// //abstract override
+		// public clone() {
+		// 	const result = new VgxCircle();
+		// 	this._copyMembersValues(result);
+		// 	return result;
+		// }
 
 		public get radius() { return this._radius; }
 		public set radius(v: number) { 
@@ -40,5 +53,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Circle", "Vgx.VgxCircle");
+	EntityTypeManager.registerType("Circle", VgxCircle);
 }

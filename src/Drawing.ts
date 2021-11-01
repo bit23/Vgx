@@ -19,6 +19,7 @@ namespace Vgx {
 		}
 
 
+		private _events: EventsManager;
 		private _usedHandles: string[];
 		private _children: VgxEntityCollection;
 		private _isDirty = true;
@@ -26,11 +27,17 @@ namespace Vgx {
 		private _redrawHandlers: Array<Action>;
 		private _artboard: Artboard;
 
+		public onChildrenChanged: EventSet<Drawing, CollectionChangedArgs<VgxEntity>>;
+
 		constructor() {
+			this._background = "#fff";
 			this._usedHandles = [];
 			this._children = new VgxEntityCollection(this);
 			this._children.onCollectionChanged.add(this._onChildrenChanged, this);
 			this._redrawHandlers = [];
+
+			this._events = new EventsManager(this);
+			this.onChildrenChanged = new EventSet(this._events, "onChildrenChanged", this);
 		}
 
 

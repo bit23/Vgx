@@ -8,6 +8,7 @@ namespace Vgx {
 		private _handle: string;
 		private _drawing: Drawing;
 		private _bindings: DynamicObject;
+		private _parent: VgxObject;
 
 
 		constructor() {
@@ -15,6 +16,11 @@ namespace Vgx {
 			this._events = new EventsManager(this);
 			this.onHandleCreated = new EventSet<VgxObject, EventArgs>(this._events, "onHandleCreated");
 			this.onHandleDestroyed = new EventSet<VgxObject, EventArgs>(this._events, "onHandleDestroyed");
+		}
+
+		// internal
+		public _setParent(parent: VgxObject) {
+			this._parent = parent;
 		}
 
 
@@ -50,11 +56,18 @@ namespace Vgx {
 			}
 		}
 
+		// abstract
+		protected abstract _copyMembersValues(destination: VgxEntity): void;
 
 		public abstract getBounds(): Rect;
 
 
-		public get drawing() { return this._drawing; }
+		public get drawing(): Drawing { 
+			if (this._parent) {
+				return this._parent.drawing;
+			}
+			return this._drawing; 
+		}
 
 		public get handle() { return this._handle; }
 

@@ -10,7 +10,12 @@ namespace Vgx {
 		constructor() {
 			super();
 			this._children = new VgxEntityCollection(this);
-			this._children.onCollectionChanged.add((s, e) => this.updateBounds());
+			this._children.onCollectionChanged.add((s, e) => {
+				for (const item of e.items) {
+					item._setParent(this);
+				}
+				this.updateBounds();
+			});
 		}
 
 
@@ -53,5 +58,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Group", "Vgx.VgxGroup");
+	EntityTypeManager.registerType("Group", VgxGroup);
 }

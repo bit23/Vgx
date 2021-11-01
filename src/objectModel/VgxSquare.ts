@@ -45,5 +45,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Square", "Vgx.VgxSquare");
+	EntityTypeManager.registerType("Square", VgxSquare);
 }

@@ -176,6 +176,15 @@ var Cgx;
             this.x1 = 100;
             this.y1 = 100;
         }
+        clone() {
+            const result = new LinearGradientBrush();
+            result._colorStops = this._colorStops.slice(0);
+            result.x0 = this.x0;
+            result.y0 = this.y0;
+            result.x1 = this.x1;
+            result.y1 = this.y1;
+            return result;
+        }
     }
     Cgx.LinearGradientBrush = LinearGradientBrush;
     class RadialGradientBrush extends GradientBrush {
@@ -189,6 +198,17 @@ var Cgx;
             this.y1 = 100;
             this.r1 = 0;
         }
+        clone() {
+            const result = new RadialGradientBrush();
+            result._colorStops = this._colorStops.slice(0);
+            result.x0 = this.x0;
+            result.y0 = this.y0;
+            result.r0 = this.r0;
+            result.x1 = this.x1;
+            result.y1 = this.y1;
+            result.r1 = this.r1;
+            return result;
+        }
     }
     Cgx.RadialGradientBrush = RadialGradientBrush;
     class PatternBrush extends Brush {
@@ -197,6 +217,12 @@ var Cgx;
             this.brushType = "pattern";
             this.image = null;
             this.repetition = "repeat";
+        }
+        clone() {
+            const result = new PatternBrush();
+            result.image = this.image.cloneNode();
+            result.repetition = this.repetition;
+            return result;
         }
     }
     Cgx.PatternBrush = PatternBrush;
@@ -849,6 +875,7 @@ var Cgx;
             this.name = "CanvasRenderer";
             this._context = canvas.getContext("2d");
             this.setDefaultValues();
+            this._context.translate(-0.5, -0.5);
         }
         setDefaultValues() {
             this.globalAlpha = Cgx.GraphicsRenderer.defaultValues.globalAlpha;
@@ -2318,6 +2345,17 @@ var Cgx;
             this._scaleY = 1.0;
             this._rotation = 0.0;
             this._propertyChanged = (p) => { };
+        }
+        clone() {
+            const result = new Transform();
+            result._originX = this._originX;
+            result._originY = this._originY;
+            result._translationX = this._translationX;
+            result._translationY = this._translationY;
+            result._scaleX = this._scaleX;
+            result._scaleY = this._scaleY;
+            result._rotation = this._rotation;
+            return result;
         }
         get originX() {
             return this._originX;

@@ -49,5 +49,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Ellipse", "Vgx.VgxEllipse");
+	EntityTypeManager.registerType("Ellipse", VgxEllipse);
 }

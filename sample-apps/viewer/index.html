@@ -4,6 +4,8 @@
     <title></title>
     <meta charset="utf-8" />
 
+    <script src="https://kit.fontawesome.com/f68eff70b5.js" crossorigin="anonymous"></script>
+
 	<script src="../../libs/cgx/cgx.js"></script>
     <script src="../../dist/vgx.js"></script>
 
@@ -17,52 +19,57 @@
 
 </head>
 <body>
-    <div id="menuBar" class="menuBar">
-        <div class="menuGroup">
-            <div class="menuElement label">Drawing</div>
-            <div class="menuElement">
-                <select id="selectDrawing" name="selectDrawing" title="seleziona disegno" class="select-drawing">
-                    <!--<option value="../../drawings/points.json|json">points</option>-->
-                    <!-- <option value="../../drawings/vgx-model.js|script">vgx-model</option>
-                    <option value="../../drawings/modern-clock.js|script">modern-clock</option>
-                    <option value="../../drawings/clock.js|script">clock</option> -->
-                    <!--<option value="../../drawings/colors.js|script">colors</option>-->
-                    <!-- <option value="../../drawings/house.json|json">house</option>
-                    <option value="../../drawings/hello-world.json|json">hello-world</option>
-                    <option value="../../drawings/google-logo.json|json">google-logo</option> -->
-                </select>
+    <div class="app-view">
+        <div id="menuBar" class="menuBar">
+            <div class="menuGroup">
+                <div class="menuElement label">Drawing</div>
+                <div class="menuElement">
+                    <select id="selectDrawing" name="selectDrawing" title="seleziona disegno" class="select-drawing">
+                        <!--<option value="../../drawings/points.json|json">points</option>-->
+                        <!-- <option value="../../drawings/vgx-model.js|script">vgx-model</option>
+                        <option value="../../drawings/modern-clock.js|script">modern-clock</option>
+                        <option value="../../drawings/clock.js|script">clock</option> -->
+                        <!--<option value="../../drawings/colors.js|script">colors</option>-->
+                        <!-- <option value="../../drawings/house.json|json">house</option>
+                        <option value="../../drawings/hello-world.json|json">hello-world</option>
+                        <option value="../../drawings/google-logo.json|json">google-logo</option> -->
+                    </select>
+                </div>
+            </div>
+            <!--<div class="separator"></div>-->
+            <div class="menuGroup">
+                <div class="menuElement label">Background</div>
+                <div class="menuElement">
+                    <select id="selectBackground" name="selectBackground" title="seleziona background">
+                        <!-- <option value="#0a0d11">Dark</option>
+                        <option value="#f1f5ff">Light</option> -->
+                    </select>
+                </div>
+            </div>
+            <!--<div class="menuGroup">
+                <div class="menuElement label">Orientation</div>
+                <div class="menuElement">
+                    <select id="selectOrientation">
+                        <option value="#ffffff">Top down</option>
+                        <option value="#ffffff">Bottom up</option>
+                    </select>
+                </div>
+            </div>-->
+            <div class="menuGroup">
+                <div class="menuElement label">Viewports</div>
+                <div class="menuElement">
+                    <select id="selectViewports" name="selectViewports" title="seleziona viewport">
+                        <!-- <option value="1">One</option>
+                        <option value="2">Two vertical</option>
+                        <option value="3">Two horizontal</option> -->
+                    </select>
+                </div>
             </div>
         </div>
-        <!--<div class="separator"></div>-->
-        <div class="menuGroup">
-            <div class="menuElement label">Background</div>
-            <div class="menuElement">
-                <select id="selectBackground" name="selectBackground" title="seleziona background">
-                    <!-- <option value="#0a0d11">Dark</option>
-                    <option value="#f1f5ff">Light</option> -->
-                </select>
-            </div>
-        </div>
-        <!--<div class="menuGroup">
-            <div class="menuElement label">Orientation</div>
-            <div class="menuElement">
-                <select id="selectOrientation">
-                    <option value="#ffffff">Top down</option>
-                    <option value="#ffffff">Bottom up</option>
-                </select>
-            </div>
-        </div>-->
-        <div class="menuGroup">
-            <div class="menuElement label">Viewports</div>
-            <div class="menuElement">
-                <select id="selectViewports" name="selectViewports" title="seleziona viewport">
-                    <!-- <option value="1">One</option>
-                    <option value="2">Two vertical</option>
-                    <option value="3">Two horizontal</option> -->
-                </select>
-            </div>
+        <div class="main-view">
+            <div id="contentView" class="app-layout"></div>
+            <div id="sideView" class="side-view"></div>
         </div>
     </div>
-    <div id="mainView" class="mainView"></div>
 </body>
 </html>

@@ -23,4 +23,5 @@ namespace Vgx {
 	export type Point = Cgx.Point;
 
 	export type Size = Cgx.Size;
+
 }

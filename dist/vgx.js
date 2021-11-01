@@ -71,10 +71,13 @@ var Vgx;
     class Drawing {
         constructor() {
             this._isDirty = true;
+            this._background = "#fff";
             this._usedHandles = [];
             this._children = new Vgx.VgxEntityCollection(this);
             this._children.onCollectionChanged.add(this._onChildrenChanged, this);
             this._redrawHandlers = [];
+            this._events = new Vgx.EventsManager(this);
+            this.onChildrenChanged = new Vgx.EventSet(this._events, "onChildrenChanged", this);
         }
         static fromJSON(json) {
             const jobject = JSON.parse(json);
@@ -410,9 +413,9 @@ var Vgx;
             this.strokeWidth = group.strokeWidth;
             this._graphics.fillBrush = group.fill;
             this._graphics.shadow = group.shadow;
-            var t = new Cgx.Transform();
-            t.translationX = group.insertPointX;
-            t.translationY = group.insertPointY;
+            var t = group.transform.clone();
+            t.translationX += group.insertPointX;
+            t.translationY += group.insertPointY;
             this._graphics.pushTransform(t);
             this._drawEntityCollection(group.children);
             this._graphics.popTransform();
@@ -432,6 +435,7 @@ var Vgx;
             }
             this._drawEntityCollection(view.children);
             if (hasClipBounds) {
+                this._graphics.fillBrush = "transparent";
                 this._graphics.strokeBrush = view.stroke;
                 this.strokeWidth = view.strokeWidth;
                 this._graphics.drawRectangle(view.clipBounds.x, view.clipBounds.y, view.clipBounds.width, view.clipBounds.height);
@@ -504,20 +508,11 @@ var Vgx;
         }
         static getVgxType(entityName) {
             let vgxNs = Vgx;
-            const entityTypeDefinition = Vgx.EntityTypeManager.getType(entityName);
+            const entityTypeDefinition = Vgx.EntityTypeManager.getByName(entityName);
             if (entityTypeDefinition == null) {
                 return null;
             }
-            const nsparts = entityTypeDefinition.typeName.split(".");
-            const typeName = nsparts[nsparts.length - 1];
-            let ns = vgxNs;
-            if (nsparts.length > 1) {
-                ns = DrawingLoader.resolveNamespace(nsparts.slice(0, nsparts.length - 1));
-                if (ns == null) {
-                    return null;
-                }
-            }
-            return Reflect.get(ns, typeName);
+            return entityTypeDefinition.ctor;
         }
         static loadCustomEntities(jsonCustomEntities) {
             const drawingCustomEntities = Vgx.DictionaryObject.fromObject(jsonCustomEntities);
@@ -572,6 +567,19 @@ var Vgx;
             this._propertyChanged = (propertyName) => {
                 this._entity.geometryDirty = true;
             };
+        }
+        static fromEntity(entity, transform = null) {
+            const result = new EntityTransform(entity);
+            if (transform) {
+                result.originX = transform.originX;
+                result.originY = transform.originY;
+                result.rotation = transform.rotation;
+                result.scaleX = transform.scaleX;
+                result.scaleY = transform.scaleY;
+                result.translationX = transform.translationX;
+                result.translationY = transform.translationY;
+            }
+            return result;
         }
     }
     Vgx.EntityTransform = EntityTransform;
@@ -636,11 +644,12 @@ var Vgx;
         }
         *[Symbol.iterator]() {
             let i = 0;
-            while (i == this._keys.length) {
+            while (i != this._keys.length) {
                 yield {
                     key: this._keys[i],
                     value: this._values[i]
                 };
+                i++;
             }
         }
     }
@@ -649,14 +658,14 @@ var Vgx;
 var Vgx;
 (function (Vgx) {
     class EntityTypeManager {
-        static registerType(name, typeName, defaultValues = null) {
+        static registerType(name, ctor, defaultValues = null) {
             if (this._registeredTypes.containsKey(name)) {
                 throw new Error(`type '${name}' already defined`);
             }
-            const definition = { name, typeName, defaultValues };
+            const definition = { name, ctor, defaultValues };
             this._registeredTypes.set(name, definition);
         }
-        static getType(name, throwException = false) {
+        static getByName(name, throwException = false) {
             if (!this._registeredTypes.containsKey(name)) {
                 if (throwException) {
                     throw new Error(`type '${name}' doesn't exists`);
@@ -666,6 +675,14 @@ var Vgx;
                 }
             }
             return this._registeredTypes.get(name);
+        }
+        static getByTypeConstructor(ctor, throwException = false) {
+            for (const entry of this._registeredTypes) {
+                if (entry.value.ctor === ctor) {
+                    return entry;
+                }
+            }
+            return null;
         }
     }
     EntityTypeManager._registeredTypes = new Vgx.DictionaryObject();
@@ -971,6 +988,14 @@ var Vgx;
                 }
             }
             return false;
+        }
+        clone() {
+            const result = new Shadow();
+            result._blur = this._blur;
+            result._color = this._color;
+            result._offsetX = this._offsetX;
+            result._offsetY = this._offsetY;
+            return result;
         }
         get blur() { return this._blur; }
         set blur(v) {
@@ -1285,10 +1310,10 @@ var Vgx;
             return this._items;
         }
         add(item) {
-            return this.insert(this._items.length - 1, item);
+            return this.insert(this._items.length, item);
         }
         addRange(items) {
-            return this.insertRange(this._items.length - 1, items);
+            return this.insertRange(this._items.length, items);
         }
         elementAt(index) {
             return this._items[index];
@@ -1717,28 +1742,209 @@ var Vgx;
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
-    class SvgImporter {
+    class SvgImporter extends Vgx.Importer {
         constructor() {
+            super();
+            this._svgNamespaces = ["http://www.w3.org/2000/svg"];
+            this._defs = new Vgx.DictionaryObject();
         }
-        loadSvgFile(url) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const response = yield fetch(url);
-                const svgCode = yield response.text();
-                return this.loadSvgCode(svgCode);
-            });
+        tryParseNumber(str, fallbackValue = 0) {
+            try {
+                return parseFloat(str);
+            }
+            catch (error) {
+                return fallbackValue;
+            }
         }
-        loadSvgCode(svgCode) {
-            const result = new Vgx.Drawing();
-            const parser = new DOMParser();
-            const document = parser.parseFromString(svgCode, "image/svg+xml");
+        tryParseTransform(str, fallbackValue = null) {
+            const transformRegex = /(matrix)\((?<a>-*\d+(?:\.\d+)*)\s*(?<b>-*\d+(?:\.\d+)*)\s*(?<c>-*\d+(?:\.\d+)*)\s*(?<d>-*\d+(?:\.\d+)*)\s*(?<e>-*\d+(?:\.\d+)*)\s*(?<f>-*\d+(?:\.\d+)*)\s*\)|(translate)\((?<x>-*\d+(?:\.\d+)*)\s*(?<y>-*\d+(?:\.\d+)*)*\)|(scale)\((?<scaleX>-*\d+(?:\.\d+)*)\s*(?<scaleY>-*\d+(?:\.\d+)*)*\)|(rotate)\((?<angle>-*\d+(?:\.\d+)*)\s*(?<rotateX>-*\d+(?:\.\d+)*)*\s*(?<rotateY>-*\d+(?:\.\d+)*)*\)|(skew\w)\((?<skewValue>-*\d+(?:\.\d+)*)\)/igm;
+            try {
+                const result = new Cgx.Transform();
+                const regexMatchArray = transformRegex.exec(str);
+                const matchParts = regexMatchArray.filter(x => x != undefined);
+                switch (matchParts[1]) {
+                    case "matrix":
+                        break;
+                    case "translate":
+                        result.translationX = this.tryParseNumber(matchParts[2]);
+                        if (matchParts.length > 1) {
+                            result.translationY = this.tryParseNumber(matchParts[3]);
+                        }
+                        break;
+                    case "scale":
+                        result.scaleX = this.tryParseNumber(matchParts[2]);
+                        if (matchParts.length > 1) {
+                            result.scaleY = this.tryParseNumber(matchParts[3]);
+                        }
+                        break;
+                    case "rotate":
+                        if (matchParts.length > 1) {
+                            result.translationX = this.tryParseNumber(matchParts[3]);
+                        }
+                        if (matchParts.length > 2) {
+                            result.translationY = this.tryParseNumber(matchParts[4]);
+                        }
+                        result.rotation = this.tryParseNumber(matchParts[2]);
+                        break;
+                    case "skewX":
+                    case "skewY":
+                        throw new Error("not implemented");
+                        break;
+                }
+                return result;
+            }
+            catch (error) {
+                return fallbackValue;
+            }
+        }
+        loadChildren(children) {
+            const result = [];
+            for (const child of children) {
+                if (this._svgNamespaces.indexOf(child.namespaceURI))
+                    console.dir(child.nodeType);
+                const vgxEntity = this.loadSvgElement(child);
+                if (vgxEntity) {
+                    result.push(vgxEntity);
+                }
+            }
             return result;
         }
-        loadSvg(svg) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (svg.startsWith('<')) {
-                    return this.loadSvgCode(svg);
+        readBaseProperties(node, entity) {
+            if (node.hasAttribute("id")) {
+                entity.id = node.getAttribute("id");
+            }
+            if (node.hasAttribute("transform")) {
+                entity.transform = this.tryParseTransform(node.getAttribute("transform"), new Cgx.Transform());
+            }
+        }
+        readGraphicProperties(node, entity) {
+            if (entity && node.hasAttribute("fill")) {
+                entity.fill = node.getAttribute("fill");
+            }
+            if (node.hasAttribute("stroke")) {
+                entity.stroke = node.getAttribute("stroke");
+            }
+            if (node.hasAttribute("stroke-width")) {
+                entity.strokeWidth = this.tryParseNumber(node.getAttribute("stroke-width"), 0);
+            }
+        }
+        readInsertProperties(node, entity) {
+            if (node.hasAttribute("x")) {
+                entity.insertPointX = this.tryParseNumber(node.getAttribute("x"), 0);
+            }
+            if (node.hasAttribute("y")) {
+                entity.insertPointY = this.tryParseNumber(node.getAttribute("y"), 0);
+            }
+        }
+        readTextProperties(node, entity) {
+            entity.source = node.textContent;
+            if (node.hasAttribute("font-family")) {
+                entity.fontFamily = node.getAttribute("font-family");
+            }
+            if (node.hasAttribute("font-size")) {
+                entity.fontSize = this.tryParseNumber(node.getAttribute("font-size"), 0);
+            }
+        }
+        storeDefs(node) {
+            const children = this.loadChildren(node.children);
+            for (const child of children) {
+                this._defs.set(child.id, child);
+            }
+        }
+        loadGroup(node) {
+            const result = new Vgx.VgxGroup();
+            this.readBaseProperties(node, result);
+            const children = this.loadChildren(node.children);
+            result.children.addRange(children);
+            return result;
+        }
+        loadPath(node) {
+            const result = new Vgx.VgxPath();
+            this.readBaseProperties(node, result);
+            this.readInsertProperties(node, result);
+            this.readGraphicProperties(node, result);
+            if (node.hasAttribute("d")) {
+                result.addFigure(node.getAttribute("d"));
+            }
+            return result;
+        }
+        loadText(node) {
+            const result = new Vgx.VgxText();
+            this.readBaseProperties(node, result);
+            this.readInsertProperties(node, result);
+            this.readGraphicProperties(node, result);
+            this.readTextProperties(node, result);
+            return result;
+        }
+        loadUse(node) {
+            let result;
+            if (node.hasAttribute("xlink:href")) {
+                const href = node.getAttribute("xlink:href");
+                const refEntity = this._defs.get(href.substr(1));
+                result = refEntity.clone();
+            }
+            this.readBaseProperties(node, result);
+            this.readInsertProperties(node, result);
+            this.readGraphicProperties(node, result);
+            return result;
+        }
+        loadSvgElement(child) {
+            switch (child.localName) {
+                case "defs": {
+                    this.storeDefs(child);
+                    break;
                 }
-                return this.loadSvgFile(svg);
+                case "g": {
+                    return this.loadGroup(child);
+                }
+                case "path": {
+                    return this.loadPath(child);
+                }
+                case "text": {
+                    return this.loadText(child);
+                }
+                case "use": {
+                    return this.loadUse(child);
+                }
+            }
+        }
+        loadSvgCode(svgCode) {
+            let drawing = new Vgx.Drawing();
+            let parent = drawing;
+            const parser = new DOMParser();
+            const document = parser.parseFromString(svgCode, "image/svg+xml");
+            const svgElement = document.documentElement;
+            if (svgElement.hasAttribute("width") && svgElement.hasAttribute("height")) {
+                const widthValue = this.tryParseNumber(svgElement.getAttribute("width"), 0);
+                const heightValue = this.tryParseNumber(svgElement.getAttribute("height"), 0);
+                if (widthValue && heightValue) {
+                    const view = new Vgx.VgxView();
+                    view.clipBounds = new Vgx.Rect(0, 0, widthValue, heightValue);
+                    view.clip = true;
+                    parent = view;
+                    drawing.addChild(parent);
+                }
+            }
+            const children = this.loadChildren(svgElement.children);
+            if (parent instanceof Vgx.Drawing) {
+                for (const child of children) {
+                    parent.addChild(child);
+                }
+            }
+            else {
+                parent.children.addRange(children);
+            }
+            return drawing;
+        }
+        load(source) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const svgDrawing = this.loadSvgCode(source);
+                    resolve(svgDrawing);
+                }
+                catch (err) {
+                    reject(err);
+                }
             });
         }
     }
@@ -1753,6 +1959,9 @@ var Vgx;
             this._events = new Vgx.EventsManager(this);
             this.onHandleCreated = new Vgx.EventSet(this._events, "onHandleCreated");
             this.onHandleDestroyed = new Vgx.EventSet(this._events, "onHandleDestroyed");
+        }
+        _setParent(parent) {
+            this._parent = parent;
         }
         _addToDrawing() {
             this._handle = this._drawing.getFreeHandle();
@@ -1782,7 +1991,12 @@ var Vgx;
                 return defaultValue;
             }
         }
-        get drawing() { return this._drawing; }
+        get drawing() {
+            if (this._parent) {
+                return this._parent.drawing;
+            }
+            return this._drawing;
+        }
         get handle() { return this._handle; }
         addToDrawing(drawing) {
             if (this._drawing != drawing) {
@@ -1814,6 +2028,9 @@ var Vgx;
             this._appearanceDirty = true;
             this._geometryDirty = true;
             this._positionDirty = true;
+        }
+        _copyMembersValues(destination) {
+            destination._visible = this._visible;
         }
         draw(drawingContext) { }
         get appearanceDirty() { return this._appearanceDirty; }
@@ -1859,10 +2076,33 @@ var Vgx;
             this._insertPointY = 0;
             this._stroke = null;
             this._strokeWidth = Vgx.Vars.defaultStrokeWidth;
+            this._stroke = "transparent";
+            this._strokeWidth = 0;
             this._shadow = new Vgx.Shadow();
             this._shadow.onPropertyChanged.add(function () { this.appearanceDirty = true; }, {});
             this._transform = new Vgx.EntityTransform(this);
             this._cachedBounds = new Vgx.Rect();
+        }
+        _cloneBrushDefinition(brushDefinition) {
+            const typeofBrushDefinition = typeof brushDefinition;
+            if (typeofBrushDefinition == "string" || typeofBrushDefinition == "number") {
+                return brushDefinition;
+            }
+            else if (brushDefinition instanceof Array) {
+                return brushDefinition.slice(0);
+            }
+            else if (brushDefinition instanceof Cgx.Brush) {
+                return brushDefinition.clone();
+            }
+        }
+        _copyMembersValues(destination) {
+            super._copyMembersValues(destination);
+            destination._insertPointX = this._insertPointX;
+            destination._insertPointY = this._insertPointY;
+            destination._stroke = this._cloneBrushDefinition(this._stroke);
+            destination._strokeWidth = this._strokeWidth;
+            destination._shadow = this._shadow.clone();
+            destination._transform = Vgx.EntityTransform.fromEntity(destination, this.transform.clone());
         }
         _getVertices() {
             return [{
@@ -1885,6 +2125,12 @@ var Vgx;
                 }
             }
         }
+        clone() {
+            const type = this.constructor;
+            const result = new type();
+            this._copyMembersValues(result);
+            return result;
+        }
         getBounds() {
             if (this.geometryDirty) {
                 var bounds = this._getBounds();
@@ -1900,6 +2146,8 @@ var Vgx;
             }
             return this._cachedBounds;
         }
+        get id() { return this._id; }
+        set id(v) { this._id = v; }
         get insertPointX() { return this._getValue("insertPointX", this._insertPointX); }
         set insertPointX(v) {
             if (this._insertPointX != v) {
@@ -1966,6 +2214,15 @@ var Vgx;
             var y2 = Math.max(ysa, yea);
             return new Vgx.Rect(this.insertPointX + x1, this.insertPointY + y1, x2 - x1, y2 - y1);
         }
+        _copyMembersValues(destination) {
+            super._copyMembersValues(destination);
+            destination._radius = this._radius;
+            destination._startAngle = this._startAngle;
+            destination._startAngleRad = this._startAngleRad;
+            destination._endAngle = this._endAngle;
+            destination._endAngleRad = this._endAngleRad;
+            destination._isAntiClockwise = this._isAntiClockwise;
+        }
         _getPath() {
             return null;
         }
@@ -2020,11 +2277,15 @@ var Vgx;
         }
     }
     Vgx.VgxArc = VgxArc;
-    Vgx.EntityTypeManager.registerType("Arc", "Vgx.VgxArc");
+    Vgx.EntityTypeManager.registerType("Arc", VgxArc);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
     class VgxFillableEntity extends Vgx.VgxEntity {
+        constructor() {
+            super();
+            this._fill = "#000";
+        }
         get fill() { return this._getValue("fill", this._fill); }
         set fill(v) {
             if (this._fill != v) {
@@ -2049,6 +2310,10 @@ var Vgx;
             var h = this._radius * 2;
             return new Vgx.Rect(x, y, w, h);
         }
+        _copyMembersValues(destination) {
+            super._copyMembersValues(destination);
+            destination._radius = this._radius;
+        }
         _getPath() {
             return null;
         }
@@ -2064,7 +2329,7 @@ var Vgx;
         }
     }
     Vgx.VgxCircle = VgxCircle;
-    Vgx.EntityTypeManager.registerType("Circle", "Vgx.VgxCircle");
+    Vgx.EntityTypeManager.registerType("Circle", VgxCircle);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2079,6 +2344,13 @@ var Vgx;
         }
         _getBounds() {
             return this._bounds;
+        }
+        _copyMembersValues(destination) {
+            super._copyMembersValues(destination);
+            destination.isClosed = this.isClosed;
+            destination.points.addRange(this.points.toArray());
+            destination.controlPoints1.addRange(this.controlPoints1.toArray());
+            destination.controlPoints2.addRange(this.controlPoints2.toArray());
         }
         updateBounds() {
             let minX = Number.MAX_VALUE;
@@ -2121,7 +2393,7 @@ var Vgx;
         }
     }
     Vgx.VgxCubicCurve = VgxCubicCurve;
-    Vgx.EntityTypeManager.registerType("CubicCurve", "Vgx.VgxCubicCurve");
+    Vgx.EntityTypeManager.registerType("CubicCurve", VgxCubicCurve);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2148,6 +2420,16 @@ var Vgx;
             var x2 = Math.max(xsa, xea);
             var y2 = Math.max(ysa, yea);
             return new Vgx.Rect(this.insertPointX + x1, this.insertPointY + y1, x2 - x1, y2 - y1);
+        }
+        _copyMembersValues(destination) {
+            super._copyMembersValues(destination);
+            destination._startRadius = this._startRadius;
+            destination._endRadius = this._endRadius;
+            destination._startAngle = this._startAngle;
+            destination._startAngleRad = this._startAngleRad;
+            destination._endAngle = this._endAngle;
+            destination._endAngleRad = this._endAngleRad;
+            destination._isAntiClockwise = this._isAntiClockwise;
         }
         _getPath() {
             return null;
@@ -2210,7 +2492,7 @@ var Vgx;
         }
     }
     Vgx.VgxDonut = VgxDonut;
-    Vgx.EntityTypeManager.registerType("Donut", "Vgx.VgxDonut");
+    Vgx.EntityTypeManager.registerType("Donut", VgxDonut);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2249,7 +2531,7 @@ var Vgx;
         }
     }
     Vgx.VgxEllipse = VgxEllipse;
-    Vgx.EntityTypeManager.registerType("Ellipse", "Vgx.VgxEllipse");
+    Vgx.EntityTypeManager.registerType("Ellipse", VgxEllipse);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2272,7 +2554,12 @@ var Vgx;
         constructor() {
             super();
             this._children = new Vgx.VgxEntityCollection(this);
-            this._children.onCollectionChanged.add((s, e) => this.updateBounds());
+            this._children.onCollectionChanged.add((s, e) => {
+                for (const item of e.items) {
+                    item._setParent(this);
+                }
+                this.updateBounds();
+            });
         }
         _getBounds() {
             return this._bounds;
@@ -2302,7 +2589,7 @@ var Vgx;
         }
     }
     Vgx.VgxGroup = VgxGroup;
-    Vgx.EntityTypeManager.registerType("Group", "Vgx.VgxGroup");
+    Vgx.EntityTypeManager.registerType("Group", VgxGroup);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2352,7 +2639,7 @@ var Vgx;
         }
     }
     Vgx.VgxImage = VgxImage;
-    Vgx.EntityTypeManager.registerType("Image", "Vgx.VgxImage");
+    Vgx.EntityTypeManager.registerType("Image", VgxImage);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2401,7 +2688,7 @@ var Vgx;
         }
     }
     Vgx.VgxLine = VgxLine;
-    Vgx.EntityTypeManager.registerType("Line", "Vgx.VgxLine");
+    Vgx.EntityTypeManager.registerType("Line", VgxLine);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2453,6 +2740,13 @@ var Vgx;
         }
         _getBounds() {
             return this._bounds;
+        }
+        _copyMembersValues(destination) {
+            super._copyMembersValues(destination);
+            destination._fillRule = this._fillRule;
+            for (const path2D of this._children) {
+                destination._children.addRange(this._children.toArray());
+            }
         }
         updateBounds() {
             var result = new Vgx.Rect();
@@ -2592,7 +2886,7 @@ var Vgx;
         }
     }
     Vgx.VgxPath = VgxPath;
-    Vgx.EntityTypeManager.registerType("Path", "Vgx.VgxPath");
+    Vgx.EntityTypeManager.registerType("Path", VgxPath);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2672,7 +2966,7 @@ var Vgx;
         }
     }
     Vgx.VgxPie = VgxPie;
-    Vgx.EntityTypeManager.registerType("Pie", "Vgx.VgxPie");
+    Vgx.EntityTypeManager.registerType("Pie", VgxPie);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2716,7 +3010,7 @@ var Vgx;
         }
     }
     Vgx.VgxPolyline = VgxPolyline;
-    Vgx.EntityTypeManager.registerType("Polyline", "Vgx.VgxPolyline");
+    Vgx.EntityTypeManager.registerType("Polyline", VgxPolyline);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2729,7 +3023,7 @@ var Vgx;
         }
     }
     Vgx.VgxPolygon = VgxPolygon;
-    Vgx.EntityTypeManager.registerType("Polygon", "Vgx.VgxPolygon");
+    Vgx.EntityTypeManager.registerType("Polygon", VgxPolygon);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2796,7 +3090,7 @@ var Vgx;
         }
     }
     Vgx.VgxQuad = VgxQuad;
-    Vgx.EntityTypeManager.registerType("Quad", "Vgx.VgxQuad");
+    Vgx.EntityTypeManager.registerType("Quad", VgxQuad);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2847,7 +3141,7 @@ var Vgx;
         }
     }
     Vgx.VgxQuadraticCurve = VgxQuadraticCurve;
-    Vgx.EntityTypeManager.registerType("QuadraticCurve", "Vgx.VgxQuadraticCurve");
+    Vgx.EntityTypeManager.registerType("QuadraticCurve", VgxQuadraticCurve);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2890,7 +3184,7 @@ var Vgx;
         }
     }
     Vgx.VgxRectangle = VgxRectangle;
-    Vgx.EntityTypeManager.registerType("Rectangle", "Vgx.VgxRectangle");
+    Vgx.EntityTypeManager.registerType("Rectangle", VgxRectangle);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2925,7 +3219,7 @@ var Vgx;
         }
     }
     Vgx.VgxSquare = VgxSquare;
-    Vgx.EntityTypeManager.registerType("Square", "Vgx.VgxSquare");
+    Vgx.EntityTypeManager.registerType("Square", VgxSquare);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -2999,7 +3293,7 @@ var Vgx;
         }
     }
     Vgx.VgxText = VgxText;
-    Vgx.EntityTypeManager.registerType("Text", "Vgx.VgxText");
+    Vgx.EntityTypeManager.registerType("Text", VgxText);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -3058,15 +3352,22 @@ var Vgx;
         }
     }
     Vgx.VgxTriangle = VgxTriangle;
-    Vgx.EntityTypeManager.registerType("Triangle", "Vgx.VgxTriangle");
+    Vgx.EntityTypeManager.registerType("Triangle", VgxTriangle);
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
     class VgxView extends Vgx.VgxFillableEntity {
         constructor() {
             super();
+            this.fill = "transparent";
             this._children = new Vgx.VgxEntityCollection(this);
             this._children.onCollectionChanged.add(this._onChildrenChanged, this);
+            this._children.onCollectionChanged.add((s, e) => {
+                for (const item of e.items) {
+                    item._setParent(this);
+                }
+                this.updateBounds();
+            });
         }
         _onChildrenChanged(s, e) {
             if (!this._clip) {
@@ -3116,7 +3417,198 @@ var Vgx;
         }
     }
     Vgx.VgxView = VgxView;
-    Vgx.EntityTypeManager.registerType("View", "Vgx.VgxView");
+    Vgx.EntityTypeManager.registerType("View", VgxView);
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class DrawingNode {
+        constructor() {
+            this._events = new Vgx.EventsManager(this);
+            this._children = [];
+            this._htmlElement = window.document.createElement("div");
+            this._htmlElement.classList.add("drawing-node");
+            this._htmlHeader = window.document.createElement("div");
+            this._htmlHeader.classList.add("drawing-node-header");
+            this._htmlElement.appendChild(this._htmlHeader);
+            this._htmlHeaderExpander = window.document.createElement("div");
+            this._htmlHeaderExpander.classList.add("expander");
+            this._htmlHeaderExpander.title = "expand/collapse";
+            this._htmlHeader.appendChild(this._htmlHeaderExpander);
+            this._htmlHeaderText = window.document.createElement("div");
+            this._htmlHeaderText.classList.add("text");
+            this._htmlHeader.appendChild(this._htmlHeaderText);
+            this._htmlHeaderButtons = window.document.createElement("div");
+            this._htmlHeaderButtons.classList.add("buttons");
+            this._htmlHeaderButtons.title = "show/hide";
+            this._htmlHeader.appendChild(this._htmlHeaderButtons);
+            this._htmlChildren = window.document.createElement("div");
+            this._htmlChildren.classList.add("drawing-node-children");
+            this._htmlElement.appendChild(this._htmlChildren);
+            this._buildExpander();
+            this._buildButtons();
+            this._isExpanded = false;
+            this.onEntityVisibilityStateChanged = new Vgx.EventSet(this._events, "onEntityVisibilityStateChanged", this);
+        }
+        _buildExpander() {
+            const expandButton = window.document.createElement("i");
+            expandButton.classList.add("expanded");
+            expandButton.classList.add("fas");
+            expandButton.classList.add("fa-chevron-down");
+            expandButton.addEventListener("click", this._expandCollapseButtonClick.bind(this));
+            this._htmlHeaderExpander.appendChild(expandButton);
+            const collapseButton = window.document.createElement("i");
+            collapseButton.classList.add("collapsed");
+            collapseButton.classList.add("fas");
+            collapseButton.classList.add("fa-chevron-right");
+            collapseButton.addEventListener("click", this._expandCollapseButtonClick.bind(this));
+            this._htmlHeaderExpander.appendChild(collapseButton);
+        }
+        _buildButtons() {
+            const visibleButton = window.document.createElement("i");
+            visibleButton.classList.add("visible");
+            visibleButton.classList.add("fas");
+            visibleButton.classList.add("fa-eye");
+            visibleButton.addEventListener("click", this._showHideButtonClick.bind(this));
+            this._htmlHeaderButtons.appendChild(visibleButton);
+            const hiddenButton = window.document.createElement("i");
+            hiddenButton.classList.add("hidden");
+            hiddenButton.classList.add("fas");
+            hiddenButton.classList.add("fa-eye-slash");
+            hiddenButton.addEventListener("click", this._showHideButtonClick.bind(this));
+            this._htmlHeaderButtons.appendChild(hiddenButton);
+        }
+        _loadEntity() {
+            const typeEntry = Vgx.EntityTypeManager.getByTypeConstructor(this._entity.constructor);
+            if (this._entity.id) {
+                this._htmlHeaderText.innerHTML = `<b>${this._entity.id}</b> [${typeEntry.key}]`;
+            }
+            else {
+                this._htmlHeaderText.textContent = `[${typeEntry.key}]`;
+            }
+        }
+        _updateVisibilityVisualState() {
+            if (this._hidden || this._parentHidden) {
+                this._setVisualHidden();
+            }
+            else {
+                this._setVisualVisible();
+            }
+        }
+        _toggleVisible() {
+            if (!this._parentHidden) {
+                this._hidden = !this._hidden;
+                this._updateVisibilityVisualState();
+                this._entity.visible = !this._hidden;
+                this.onEntityVisibilityStateChanged.trigger({
+                    originalSource: this,
+                    hidden: this._hidden
+                });
+            }
+        }
+        _setVisualHidden() {
+            this._htmlHeaderButtons.classList.add("hidden");
+        }
+        _setVisualVisible() {
+            this._htmlHeaderButtons.classList.remove("hidden");
+        }
+        _setParent(parentNode) {
+            if (this._parent) {
+                this._parent.onEntityVisibilityStateChanged.remove(this._parentNodeEntityVisibilityStateChanged);
+            }
+            this._parent = parentNode;
+            this._parent.onEntityVisibilityStateChanged.add(this._parentNodeEntityVisibilityStateChanged, this);
+        }
+        _expandCollapseButtonClick(e) {
+            this._isExpanded = !this._isExpanded;
+            if (this._isExpanded) {
+                this._htmlChildren.style.display = "block";
+            }
+            else {
+                this._htmlChildren.style.display = "none";
+            }
+        }
+        _showHideButtonClick(e) {
+            if (this._parentHidden) {
+                return;
+            }
+            this._toggleVisible();
+        }
+        _parentNodeEntityVisibilityStateChanged(s, e) {
+            this._parentHidden = e.hidden;
+            this._updateVisibilityVisualState();
+            if (!this._parentHidden) {
+                e = {
+                    originalSource: e.originalSource,
+                    hidden: this._hidden
+                };
+            }
+            this.onEntityVisibilityStateChanged.trigger(e);
+        }
+        get htmlElement() { return this._htmlElement; }
+        get entity() { return this._entity; }
+        set entity(v) {
+            this._entity = v;
+            this._loadEntity();
+        }
+        get hidden() { return this._hidden; }
+        set hidden(v) {
+            if (this._hidden != !!v) {
+                this._toggleVisible();
+            }
+        }
+        addChild(node) {
+            this._children.push(node);
+            node._setParent(this);
+            this._htmlChildren.appendChild(node.htmlElement);
+            this._htmlHeaderExpander.style.visibility = "visible";
+        }
+    }
+    Vgx.DrawingNode = DrawingNode;
+})(Vgx || (Vgx = {}));
+var Vgx;
+(function (Vgx) {
+    class DrawingStructureView {
+        constructor() {
+            this._htmlElement = window.document.createElement("div");
+            this._htmlElement.classList.add("drawing-structure-view");
+            this._htmlContent = window.document.createElement("div");
+            this._htmlContent.classList.add("drawing-structure-content");
+            this._htmlElement.appendChild(this._htmlContent);
+        }
+        _onDrawingChildrenChanged(s, e) {
+            this._loadDrawingStructure();
+        }
+        _loadEntityNode(entity) {
+            const node = new Vgx.DrawingNode();
+            node.entity = entity;
+            if ("children" in entity) {
+                const children = entity.children;
+                for (const childEntity of children) {
+                    const childNode = this._loadEntityNode(childEntity);
+                    node.addChild(childNode);
+                }
+            }
+            return node;
+        }
+        _loadDrawingStructure() {
+            for (const entity of this._drawing.getChildren()) {
+                const entityNode = this._loadEntityNode(entity);
+                this._htmlContent.appendChild(entityNode.htmlElement);
+            }
+        }
+        get htmlElement() { return this._htmlElement; }
+        get drawing() { return this._drawing; }
+        attachToDrawing(drawing) {
+            if (this._drawing) {
+                this._drawing.onChildrenChanged.remove(this._onDrawingChildrenChanged);
+            }
+            this._htmlContent.innerHTML = "";
+            this._drawing = drawing;
+            this._drawing.onChildrenChanged.add(this._onDrawingChildrenChanged, this);
+            this._loadDrawingStructure();
+        }
+    }
+    Vgx.DrawingStructureView = DrawingStructureView;
 })(Vgx || (Vgx = {}));
 var Vgx;
 (function (Vgx) {
@@ -3129,11 +3621,11 @@ var Vgx;
             this._viewportsSpace = 2;
             this._neverArranged = true;
             this._htmlElement = window.document.createElement("div");
-            this._htmlElement.classList.add("VectorGraphicsView");
-            this._htmlElement.style.width = "100%";
-            this._htmlElement.style.height = "100%";
+            this._htmlElement.classList.add("vector-graphics-view");
+            this._htmlElement.classList.add("layout1");
             this.onViewportsLayoutChanged = new Vgx.EventSet(this._events, "onViewportsLayoutChanged");
             this._addNewViewport();
+            this._addViewportSpacer();
             window.addEventListener("resize", () => this._arrangeLayout());
         }
         _arrangeLayout() {
@@ -3141,37 +3633,31 @@ var Vgx;
                 return;
             switch (this._viewportsLayout) {
                 case Vgx.ViewportsLayout.ONE:
+                    this._htmlElement.classList.add("layout1");
+                    this._htmlElement.classList.remove("layout2");
+                    this._htmlElement.classList.remove("layout3");
                     break;
                 case Vgx.ViewportsLayout.TWO_VERTICAL:
                     {
-                        var width = (this._htmlElement.offsetWidth - this._viewportsSpace) * 0.5;
-                        var height = this._htmlElement.offsetHeight;
-                        var viewportLeft = this._viewports[0];
-                        viewportLeft.width = width;
-                        viewportLeft.height = height;
-                        var viewportRight = this._viewports[1];
-                        viewportRight.width = width;
-                        viewportRight.height = height;
-                        viewportRight.htmlElement.style.left = (width + this._viewportsSpace) + "px";
-                        viewportRight.htmlElement.style.top = "0px";
+                        this._htmlElement.classList.remove("layout1");
+                        this._htmlElement.classList.add("layout2");
+                        this._htmlElement.classList.remove("layout3");
                     }
                     break;
                 case Vgx.ViewportsLayout.TWO_HORIZONTAL:
                     {
-                        var width = this._htmlElement.offsetWidth;
-                        var height = (this._htmlElement.offsetHeight - this._viewportsSpace) * 0.5;
-                        var viewportTop = this._viewports[0];
-                        viewportTop.width = width;
-                        viewportTop.height = height;
-                        var viewportBottom = this._viewports[1];
-                        viewportBottom.width = width;
-                        viewportBottom.height = height;
-                        viewportBottom.htmlElement.style.left = "0px";
-                        viewportBottom.htmlElement.style.top = (height + this._viewportsSpace) + "px";
+                        this._htmlElement.classList.remove("layout1");
+                        this._htmlElement.classList.remove("layout2");
+                        this._htmlElement.classList.add("layout3");
                     }
                     break;
             }
             this._neverArranged = false;
+        }
+        _addViewportSpacer() {
+            const spacer = document.createElement("div");
+            spacer.classList.add("viewport-spacer");
+            this._htmlElement.appendChild(spacer);
         }
         _addNewViewport() {
             var viewport = new Vgx.Viewport();
@@ -3231,18 +3717,12 @@ var Vgx;
                 case 1:
                     {
                         this._ensureViewportsCount(1);
-                        this._viewports[0].htmlElement.style.position = "relative";
-                        this._viewports[0].autosize = true;
                     }
                     break;
                 case 2:
                 case 3:
                     {
                         this._ensureViewportsCount(2);
-                        this._viewports[0].htmlElement.style.position = "absolute";
-                        this._viewports[0].autosize = false;
-                        this._viewports[1].htmlElement.style.position = "absolute";
-                        this._viewports[1].autosize = false;
                     }
                     break;
             }
@@ -3317,10 +3797,10 @@ var Vgx;
             requestAnimationFrame(this._onRender.bind(this));
         }
         _setupMouseEvents() {
-            this._canvas.addEventListener("mousedown", this._onMouseDown.bind(this));
-            this._canvas.addEventListener("mousemove", this._onMouseMove.bind(this));
-            this._canvas.addEventListener("mouseup", this._onMouseUp.bind(this));
-            this._canvas.addEventListener("wheel", this._onMouseWheel.bind(this));
+            this._canvas.addEventListener("mousedown", this._onMouseDown.bind(this), true);
+            this._canvas.addEventListener("mousemove", this._onMouseMove.bind(this), true);
+            this._canvas.addEventListener("mouseup", this._onMouseUp.bind(this), true);
+            this._canvas.addEventListener("wheel", this._onMouseWheel.bind(this), true);
         }
         _checkNeedRedraw() {
             this._needRedraw = this._isDirty;
@@ -3402,14 +3882,6 @@ var Vgx;
             }
         }
         _onResize(e) {
-            if (this._autosize && this._htmlElement.parentElement) {
-                this._htmlElement.style.width = this._htmlElement.parentElement.clientWidth + "px";
-                this._htmlElement.style.height = this._htmlElement.parentElement.clientHeight + "px";
-            }
-            else {
-                this._htmlElement.style.width = this._width + "px";
-                this._htmlElement.style.height = this._height + "px";
-            }
             this._canvas.width = this._htmlElement.clientWidth;
             this._canvas.height = this._htmlElement.clientHeight;
             this._isDirty = true;
@@ -3783,6 +4255,37 @@ var SampleApps;
 })(SampleApps || (SampleApps = {}));
 var SampleApps;
 (function (SampleApps) {
+    class SvgLoadApp {
+        constructor() {
+            this._canvas = window.document.querySelector("#renderCanvas");
+            this._viewTransform = new Vgx.ViewTransform();
+            this._loadSvg("../../drawings/test.svg")
+                .then();
+        }
+        static start() {
+            new SvgLoadApp();
+        }
+        _resolveImporter(fullTypeName) {
+            const f = new Function(`return new ${fullTypeName}()`);
+            return f();
+        }
+        _loadSvg(url) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const importerType = Vgx.ImportersManager.getTypeOrDefault("svg");
+                const importer = this._resolveImporter(importerType.typeName);
+                if (!importer) {
+                    throw new Error("importer not loaded");
+                }
+                const drawing = yield importer.loadFile(url);
+                this._drawingContext = new Vgx.DrawingContext(drawing, this._canvas, this._viewTransform);
+                this._drawingContext.drawDrawing(drawing);
+            });
+        }
+    }
+    SampleApps.SvgLoadApp = SvgLoadApp;
+})(SampleApps || (SampleApps = {}));
+var SampleApps;
+(function (SampleApps) {
     class TestBoundsApp {
         static start() {
             var vectorGraphicsView = new Vgx.VectorGraphicsView();
@@ -3859,6 +4362,7 @@ var SampleApps;
             this._htmlElement.classList.add("viewportMenu");
             var menuGroupShowAxes = window.document.createElement("div");
             menuGroupShowAxes.classList.add("menuGroup");
+            menuGroupShowAxes.classList.add("menu-group-element");
             var lblShowAxes = window.document.createElement("label");
             lblShowAxes.classList.add("menuElement");
             lblShowAxes.classList.add("label");
@@ -3873,12 +4377,10 @@ var SampleApps;
                 this._viewport.drawAxes = e.target.checked;
             });
             menuGroupShowAxes.appendChild(lblShowAxes);
-            lblShowAxes.appendChild(checkShowAxes);
-            var separator1 = window.document.createElement("div");
-            separator1.classList.add("menuElement");
-            separator1.classList.add("separator");
+            menuGroupShowAxes.appendChild(checkShowAxes);
             var menuGroupScaleStyles = window.document.createElement("div");
             menuGroupScaleStyles.classList.add("menuGroup");
+            menuGroupScaleStyles.classList.add("menu-group-element");
             var lblScaleStyles = window.document.createElement("label");
             lblScaleStyles.classList.add("menuElement");
             lblScaleStyles.classList.add("label");
@@ -3893,10 +4395,7 @@ var SampleApps;
                 this._viewport.scaleStyles = e.target.checked;
             });
             menuGroupScaleStyles.appendChild(lblScaleStyles);
-            lblScaleStyles.appendChild(checkScaleStyles);
-            var separator2 = window.document.createElement("div");
-            separator2.classList.add("menuElement");
-            separator2.classList.add("separator");
+            menuGroupScaleStyles.appendChild(checkScaleStyles);
             var menuGroupButtons = window.document.createElement("div");
             menuGroupButtons.classList.add("menuGroup");
             menuGroupButtons.classList.add("menuGroupButtons");
@@ -3919,9 +4418,7 @@ var SampleApps;
             menuGroupButtons.appendChild(btnZoomPlus);
             menuGroupButtons.appendChild(btnZoomAll);
             this._htmlElement.appendChild(menuGroupShowAxes);
-            this._htmlElement.appendChild(separator1);
             this._htmlElement.appendChild(menuGroupScaleStyles);
-            this._htmlElement.appendChild(separator2);
             this._htmlElement.appendChild(menuGroupButtons);
         }
         get htmlElement() { return this._htmlElement; }
@@ -3932,20 +4429,25 @@ var SampleApps;
         constructor() {
             this._menuViewports = [];
             this._initializeUI();
+            window.addEventListener('hashchange', (e) => this._readHash());
+            this._readHash();
         }
         static start() {
             new ViewerApp();
         }
         _initializeUI() {
             this._menuBar = window.document.querySelector("#menuBar");
-            this._mainView = window.document.querySelector("#mainView");
+            this._contentView = window.document.querySelector("#contentView");
+            this._sideView = window.document.querySelector("#sideView");
             this._vectorGraphicsView = new Vgx.VectorGraphicsView();
-            this._vectorGraphicsView.onViewportsLayoutChanged.add(this._onViewportsLayoutChanged);
+            this._vectorGraphicsView.onViewportsLayoutChanged.add(this._onViewportsLayoutChanged, this);
             this._vectorGraphicsView.viewportsLayout = Vgx.ViewportsLayout.ONE;
             this._vectorGraphicsView.viewportsSpace = 4;
             this._vectorGraphicsView.currentViewport.scaleStyles = true;
             this._onViewportsLayoutChanged(this._vectorGraphicsView, null);
-            this._mainView.appendChild(this._vectorGraphicsView.htmlElement);
+            this._contentView.appendChild(this._vectorGraphicsView.htmlElement);
+            this._drawingStructureView = new Vgx.DrawingStructureView();
+            this._sideView.appendChild(this._drawingStructureView.htmlElement);
             this._selectDrawing = window.document.querySelector("#selectDrawing");
             this._selectDrawing.addEventListener("change", (e) => {
                 var args = this._selectDrawing.value.split("|");
@@ -3961,10 +4463,6 @@ var SampleApps;
             });
             window.addEventListener("resize", this._onWindowResize.bind(this));
             this._fillSelectInputs();
-            var optionParts = this._selectDrawing.options[0].value.split("|");
-            var url = optionParts[0];
-            var type = optionParts[1];
-            this._loadDrawing(url, type).catch(() => this._onWindowResize());
         }
         _fillSelectInputs() {
             const createOption = (text, value) => {
@@ -3976,6 +4474,7 @@ var SampleApps;
             this._selectDrawing.appendChild(createOption("vgx-model", "../../drawings/vgx-model.js|script"));
             this._selectDrawing.appendChild(createOption("modern-clock", "../../drawings/modern-clock.js|script"));
             this._selectDrawing.appendChild(createOption("clock", "../../drawings/clock.js|script"));
+            this._selectDrawing.appendChild(createOption("test-svg", "../../drawings/test.svg|svg"));
             this._selectDrawing.appendChild(createOption("house", "../../drawings/house.json|json"));
             this._selectDrawing.appendChild(createOption("hello-world", "../../drawings/hello-world.json|json"));
             this._selectDrawing.appendChild(createOption("google-logo", "../../drawings/google-logo.json|json"));
@@ -3986,7 +4485,24 @@ var SampleApps;
             this._selectViewports.appendChild(createOption("Two horizontal", "3"));
         }
         _onWindowResize() {
-            this._mainView.style.setProperty("padding-top", this._menuBar.clientHeight + "px");
+        }
+        _loadOptionDrawing(optionItem) {
+            const optionParts = optionItem.value.split("|");
+            const url = optionParts[0];
+            const type = optionParts[1];
+            this._loadDrawing(url, type).catch(() => this._onWindowResize());
+        }
+        _readHash() {
+            if (document.location.hash.length > 0) {
+                const hashValue = document.location.hash.substr(1);
+                const optionItem = Array.from(this._selectDrawing.options).filter(x => x.textContent == hashValue)[0];
+                if (optionItem) {
+                    this._loadOptionDrawing(optionItem);
+                    return true;
+                }
+            }
+            this._loadOptionDrawing(this._selectDrawing.options[0]);
+            return false;
         }
         _onViewportsLayoutChanged(sender, e) {
             var updatedMenuViewports = [];
@@ -4009,7 +4525,6 @@ var SampleApps;
         }
         _loadDrawing(url, type) {
             return __awaiter(this, void 0, void 0, function* () {
-                debugger;
                 const importerType = Vgx.ImportersManager.getTypeOrDefault(type);
                 const importer = this._resolveImporter(importerType.typeName);
                 if (!importer) {
@@ -4027,6 +4542,7 @@ var SampleApps;
                     drawing.background = this._selectBackground.options[0].value;
                 }
                 this._vectorGraphicsView.drawing = drawing;
+                this._drawingStructureView.attachToDrawing(drawing);
             });
         }
     }

@@ -1,4 +1,3 @@
-
 namespace SampleApps {
 
 	export class UIElement {
@@ -52,6 +51,7 @@ namespace SampleApps {
 
 			var menuGroupShowAxes = window.document.createElement("div");
 			menuGroupShowAxes.classList.add("menuGroup");
+			menuGroupShowAxes.classList.add("menu-group-element");
 
 			var lblShowAxes = window.document.createElement("label");
 			lblShowAxes.classList.add("menuElement");
@@ -69,16 +69,11 @@ namespace SampleApps {
 			});
 
 			menuGroupShowAxes.appendChild(lblShowAxes);
-			lblShowAxes.appendChild(checkShowAxes);
-
-
-			var separator1 = window.document.createElement("div");
-			separator1.classList.add("menuElement");
-			separator1.classList.add("separator");
-
+			menuGroupShowAxes.appendChild(checkShowAxes);
 
 			var menuGroupScaleStyles = window.document.createElement("div");
 			menuGroupScaleStyles.classList.add("menuGroup");
+			menuGroupScaleStyles.classList.add("menu-group-element");
 
 			var lblScaleStyles = window.document.createElement("label");
 			lblScaleStyles.classList.add("menuElement");
@@ -96,13 +91,7 @@ namespace SampleApps {
 			});
 
 			menuGroupScaleStyles.appendChild(lblScaleStyles);
-			lblScaleStyles.appendChild(checkScaleStyles);
-
-
-			var separator2 = window.document.createElement("div");
-			separator2.classList.add("menuElement");
-			separator2.classList.add("separator");
-
+			menuGroupScaleStyles.appendChild(checkScaleStyles);
 
 			var menuGroupButtons = window.document.createElement("div");
 			menuGroupButtons.classList.add("menuGroup");
@@ -132,9 +121,7 @@ namespace SampleApps {
 
 
 			this._htmlElement.appendChild(menuGroupShowAxes);
-			this._htmlElement.appendChild(separator1);
 			this._htmlElement.appendChild(menuGroupScaleStyles);
-			this._htmlElement.appendChild(separator2);
 			this._htmlElement.appendChild(menuGroupButtons);
 		}
 
@@ -152,8 +139,10 @@ namespace SampleApps {
 
 
 		private _menuBar: HTMLElement;
-		private _mainView: HTMLElement;
+		private _contentView: HTMLElement;
+		private _sideView: HTMLElement;
 		private _vectorGraphicsView: Vgx.VectorGraphicsView;
+		private _drawingStructureView: Vgx.DrawingStructureView;
 		private _selectDrawing: HTMLSelectElement;
 		private _selectBackground: HTMLSelectElement;
 		//private _selectOrientation: HTMLSelectElement;
@@ -163,21 +152,29 @@ namespace SampleApps {
 		constructor() {
 			this._menuViewports = [];
 			this._initializeUI();
+
+			window.addEventListener('hashchange', (e) => this._readHash());
+			
+			this._readHash();
 		}
 
 		private _initializeUI() {
 
 			this._menuBar = window.document.querySelector("#menuBar");
-			this._mainView = window.document.querySelector("#mainView");
+			this._contentView = window.document.querySelector("#contentView");
+			this._sideView = window.document.querySelector("#sideView");
 	
 			this._vectorGraphicsView = new Vgx.VectorGraphicsView();
-			this._vectorGraphicsView.onViewportsLayoutChanged.add(this._onViewportsLayoutChanged);
+			this._vectorGraphicsView.onViewportsLayoutChanged.add(this._onViewportsLayoutChanged, this);
 			this._vectorGraphicsView.viewportsLayout = Vgx.ViewportsLayout.ONE;
 			this._vectorGraphicsView.viewportsSpace = 4;
 			this._vectorGraphicsView.currentViewport.scaleStyles = true;
 			//_vectorGraphicsView.currentViewport.drawAxes = true;
 			this._onViewportsLayoutChanged(this._vectorGraphicsView, null);
-			this._mainView.appendChild(this._vectorGraphicsView.htmlElement);
+			this._contentView.appendChild(this._vectorGraphicsView.htmlElement);
+
+			this._drawingStructureView = new Vgx.DrawingStructureView();
+			this._sideView.appendChild(this._drawingStructureView.htmlElement);
 	
 	
 			this._selectDrawing = window.document.querySelector("#selectDrawing");
@@ -210,10 +207,7 @@ namespace SampleApps {
 
 			this._fillSelectInputs();
 
-			var optionParts = this._selectDrawing.options[0].value.split("|");
-			var url = optionParts[0];
-			var type = optionParts[1];
-			this._loadDrawing(url, type).catch(() => this._onWindowResize());
+			
 
 			//this._onWindowResize();
 		}
@@ -231,6 +225,7 @@ namespace SampleApps {
 			this._selectDrawing.appendChild(createOption("vgx-model", "../../drawings/vgx-model.js|script"));
 			this._selectDrawing.appendChild(createOption("modern-clock", "../../drawings/modern-clock.js|script"));
 			this._selectDrawing.appendChild(createOption("clock", "../../drawings/clock.js|script"));
+			this._selectDrawing.appendChild(createOption("test-svg", "../../drawings/test.svg|svg"));
 			//this._selectDrawing.appendChild(createOption("colors", "../../drawings/colors.js|script"));
 			this._selectDrawing.appendChild(createOption("house", "../../drawings/house.json|json"));
 			this._selectDrawing.appendChild(createOption("hello-world", "../../drawings/hello-world.json|json"));
@@ -244,8 +239,42 @@ namespace SampleApps {
 			this._selectViewports.appendChild(createOption("Two horizontal", "3"));
 		}
 
+		// private _loadStartDrawing() {
+		// 	if (document.location.hash.length > 0) {
+		// 		console.log(document.location.hash.substr(1));
+		// 		return true;
+		// 	}
+		// 	else {
+		// 		const optionParts = this._selectDrawing.options[0].value.split("|");
+		// 		const url = optionParts[0];
+		// 		const type = optionParts[1];
+		// 		this._loadDrawing(url, type).catch(() => this._onWindowResize());
+		// 	}
+		// }
+
 		private _onWindowResize() {
-			this._mainView.style.setProperty("padding-top", this._menuBar.clientHeight + "px");
+
+		}
+
+		private _loadOptionDrawing(optionItem: HTMLOptionElement) {
+			const optionParts = optionItem.value.split("|");
+			const url = optionParts[0];
+			const type = optionParts[1];
+			this._loadDrawing(url, type).catch(() => this._onWindowResize());
+		}
+
+		private _readHash() {
+			if (document.location.hash.length > 0) {
+				const hashValue = document.location.hash.substr(1);
+				const optionItem = Array.from(this._selectDrawing.options).filter(x => x.textContent == hashValue)[0];
+				if (optionItem) {
+					this._loadOptionDrawing(optionItem);
+					return true;
+				}
+			}
+			
+			this._loadOptionDrawing(this._selectDrawing.options[0]);
+			return false;
 		}
 
 		private _onViewportsLayoutChanged(sender: Vgx.VectorGraphicsView, e: Vgx.ViewportsLayout) {
@@ -275,29 +304,6 @@ namespace SampleApps {
 
 		private async _loadDrawing(url: string, type: "script" | "json" | string) {
 
-			// Vgx.HttpClient.downloadString(url, (s, e) => {
-			// 	var drawing;
-			// 	if (type == "script") {
-			// 		drawing = Vgx.Drawing.fromScript(e.result);
-			// 	} else {
-			// 		drawing = Vgx.Drawing.fromJSON(e.result);
-			// 	}
-			// 	if (drawing.background) {
-			// 		var option = document.createElement("option");
-			// 		option.value = <any>drawing.background;
-			// 		option.innerText = <any>drawing.background;
-			// 		this._selectBackground.options.add(option);
-			// 		this._selectBackground.selectedIndex = this._selectBackground.options.length - 1;
-			// 	} else {
-			// 		drawing.background = this._selectBackground.options[0].value;
-			// 	}
-
-			// 	this._vectorGraphicsView.drawing = drawing;
-			// 	//this._vectorGraphicsView.currentViewport.zoomAll();
-			// });
-
-			debugger;
-
 			const importerType = Vgx.ImportersManager.getTypeOrDefault(type);
 			const importer = this._resolveImporter(importerType.typeName);
 			if (!importer) {
@@ -315,6 +321,8 @@ namespace SampleApps {
 				drawing.background = this._selectBackground.options[0].value;
 			}
 			this._vectorGraphicsView.drawing = drawing;
+
+			this._drawingStructureView.attachToDrawing(drawing);
 		}
 	}
 }

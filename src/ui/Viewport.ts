@@ -59,10 +59,10 @@ namespace Vgx {
         }
 
         private _setupMouseEvents() {
-            this._canvas.addEventListener("mousedown", this._onMouseDown.bind(this));
-            this._canvas.addEventListener("mousemove", this._onMouseMove.bind(this));
-            this._canvas.addEventListener("mouseup", this._onMouseUp.bind(this));
-            this._canvas.addEventListener("wheel", this._onMouseWheel.bind(this));
+            this._canvas.addEventListener("mousedown", this._onMouseDown.bind(this), true);
+            this._canvas.addEventListener("mousemove", this._onMouseMove.bind(this), true);
+            this._canvas.addEventListener("mouseup", this._onMouseUp.bind(this), true);
+            this._canvas.addEventListener("wheel", this._onMouseWheel.bind(this), true);
         }
 
         private _checkNeedRedraw() {
@@ -169,14 +169,14 @@ namespace Vgx {
         }
 
         private _onResize(e: UIEvent) {
-            if (this._autosize && this._htmlElement.parentElement) {
-                this._htmlElement.style.width = this._htmlElement.parentElement.clientWidth + "px";
-                this._htmlElement.style.height = this._htmlElement.parentElement.clientHeight + "px";
-            }
-            else {
-                this._htmlElement.style.width = this._width + "px";
-                this._htmlElement.style.height = this._height + "px";
-            }
+            // if (this._autosize && this._htmlElement.parentElement) {
+            //     this._htmlElement.style.width = this._htmlElement.parentElement.clientWidth + "px";
+            //     this._htmlElement.style.height = this._htmlElement.parentElement.clientHeight + "px";
+            // }
+            // else {
+            //     this._htmlElement.style.width = this._width + "px";
+            //     this._htmlElement.style.height = this._height + "px";
+            // }
 
             this._canvas.width = this._htmlElement.clientWidth;
             this._canvas.height = this._htmlElement.clientHeight;

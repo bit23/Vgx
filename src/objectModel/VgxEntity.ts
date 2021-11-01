@@ -1,10 +1,10 @@
 /// <reference path="VgxDrawable.ts" />
 
-
 namespace Vgx {
 
 	export abstract class VgxEntity extends VgxDrawable {
 
+		private _id: string;
 		private _insertPointX = 0;
 		private _insertPointY = 0;
 		private _stroke: BrushDefinition = null;
@@ -17,12 +17,39 @@ namespace Vgx {
 		constructor() {
 			super();
 
+			this._stroke = "transparent";
+			this._strokeWidth = 0;
+
 			this._shadow = new Shadow();
 			this._shadow.onPropertyChanged.add(function () { this.appearanceDirty = true; }, {});
 
 			this._transform = new EntityTransform(this);
 
 			this._cachedBounds = new Rect();
+		}
+
+		private _cloneBrushDefinition(brushDefinition: BrushDefinition): BrushDefinition {
+			const typeofBrushDefinition = typeof brushDefinition;
+			if (typeofBrushDefinition == "string" || typeofBrushDefinition == "number") {
+				return brushDefinition;
+			}
+			else if (brushDefinition instanceof Array) { 
+				return brushDefinition.slice(0);
+			}
+			else if (brushDefinition instanceof Cgx.Brush){
+				return brushDefinition.clone() as any;
+			}
+		}
+
+		// override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			super._copyMembersValues(destination);
+			destination._insertPointX = this._insertPointX;
+			destination._insertPointY = this._insertPointY;
+			destination._stroke = this._cloneBrushDefinition(this._stroke);
+			destination._strokeWidth = this._strokeWidth;
+			destination._shadow = this._shadow.clone();
+			destination._transform = EntityTransform.fromEntity(destination, this.transform.clone());
 		}
 
 
@@ -34,7 +61,7 @@ namespace Vgx {
 			}]
 		}
 
-		// virtual
+		// virtual0
 		protected _getBounds() {
 			return Rect.empty;
 		}
@@ -58,6 +85,16 @@ namespace Vgx {
 		// abstract
 		public abstract _getPath(): Path2D;
 
+		// abstract
+		//public abstract clone(): VgxEntity;
+
+		public clone() {
+			const type = this.constructor as any;
+			const result = new type();
+			this._copyMembersValues(result);
+			return result;
+		}
+
 
 		public getBounds() {
 			if (this.geometryDirty) {
@@ -75,6 +112,8 @@ namespace Vgx {
 			return this._cachedBounds;
 		}
 
+		public get id() { return this._id; }
+		public set id(v: string) { this._id = v; }
 
 		public get insertPointX() { return this._getValue("insertPointX", this._insertPointX); }
 		public set insertPointX(v: number) {

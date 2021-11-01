@@ -90,17 +90,6 @@
 					]
 				]
 			}
-		],
-		[
-			"Rectangle",
-			{
-				"insertPointX": 0,
-				"insertPointY": 0,
-				"width": 270,
-				"height": 61,
-				"stroke": "lime",
-				"strokeWidth": 1
-			}
 		]
 	]
 }

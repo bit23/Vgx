@@ -20,11 +20,11 @@ namespace Vgx {
 
 
         public add(item: TElement) {
-			return this.insert(this._items.length - 1, item);
+			return this.insert(this._items.length, item);
 		}
 
 		public addRange(items: TElement[]) {
-			return this.insertRange(this._items.length - 1, items);
+			return this.insertRange(this._items.length, items);
 		}
 
 		public elementAt(index: number) {

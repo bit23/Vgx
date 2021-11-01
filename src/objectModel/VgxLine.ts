@@ -75,5 +75,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Line", "Vgx.VgxLine");
+	EntityTypeManager.registerType("Line", VgxLine);
 }

@@ -70,5 +70,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("QuadraticCurve", "Vgx.VgxQuadraticCurve");
+	EntityTypeManager.registerType("QuadraticCurve", VgxQuadraticCurve);
 }

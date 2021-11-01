@@ -63,5 +63,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Image", "Vgx.VgxImage");
+	EntityTypeManager.registerType("Image", VgxImage);
 }

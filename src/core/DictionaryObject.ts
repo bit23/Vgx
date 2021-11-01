@@ -75,11 +75,12 @@ namespace Vgx {
 
 		*[Symbol.iterator](): Iterator<KeyValuePair<TKey, TValue>, any, undefined> {
 			let i = 0;
-			while(i == this._keys.length) {
+			while(i != this._keys.length) {
 				yield { 
 					key: this._keys[i],
 					value: this._values[i]	
 				};
+				i++;
 			}
 		}
 	}

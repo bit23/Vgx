@@ -37,12 +37,14 @@ declare namespace Vgx {
     class Drawing {
         static fromJSON(json: string): Drawing;
         static fromScript(script: string): Drawing;
+        private _events;
         private _usedHandles;
         private _children;
         private _isDirty;
         private _background;
         private _redrawHandlers;
         private _artboard;
+        onChildrenChanged: EventSet<Drawing, CollectionChangedArgs<VgxEntity>>;
         constructor();
         private _onChildrenChanged;
         private _artboardPropertyChanged;
@@ -132,6 +134,7 @@ declare namespace Vgx {
 }
 declare namespace Vgx {
     class EntityTransform extends Cgx.Transform {
+        static fromEntity(entity: VgxEntity, transform?: Cgx.Transform): EntityTransform;
         private _entity;
         constructor(entity: VgxEntity);
         protected _propertyChanged: (propertyName: string) => void;
@@ -156,13 +159,14 @@ declare namespace Vgx {
 declare namespace Vgx {
     interface EntityTypeDefinition {
         name: string;
-        typeName: string;
+        ctor: Function;
         defaultValues: DynamicObject;
     }
     export class EntityTypeManager {
         private static _registeredTypes;
-        static registerType(name: string, typeName: string, defaultValues?: DynamicObject): void;
-        static getType(name: string, throwException?: boolean): EntityTypeDefinition;
+        static registerType(name: string, ctor: Function, defaultValues?: DynamicObject): void;
+        static getByName(name: string, throwException?: boolean): EntityTypeDefinition;
+        static getByTypeConstructor(ctor: Function, throwException?: boolean): KeyValuePair<string, EntityTypeDefinition>;
     }
     export {};
 }
@@ -243,6 +247,7 @@ declare namespace Vgx {
         private _offsetX;
         private _offsetY;
         constructor();
+        clone(): Shadow;
         get blur(): number;
         set blur(v: number);
         get color(): string;
@@ -509,11 +514,25 @@ declare namespace Vgx {
     }
 }
 declare namespace Vgx {
-    class SvgImporter {
+    class SvgImporter extends Importer {
+        private _svgNamespaces;
+        private _defs;
         constructor();
-        private loadSvgFile;
+        private tryParseNumber;
+        private tryParseTransform;
+        private loadChildren;
+        private readBaseProperties;
+        private readGraphicProperties;
+        private readInsertProperties;
+        private readTextProperties;
+        private storeDefs;
+        private loadGroup;
+        private loadPath;
+        private loadText;
+        private loadUse;
+        private loadSvgElement;
         private loadSvgCode;
-        loadSvg(svg: string): Promise<Drawing>;
+        load(source: any): Promise<Drawing>;
     }
 }
 declare namespace Vgx {
@@ -522,11 +541,14 @@ declare namespace Vgx {
         private _handle;
         private _drawing;
         private _bindings;
+        private _parent;
         constructor();
+        _setParent(parent: VgxObject): void;
         private _addToDrawing;
         private _removeFromDrawing;
         protected _addedToDrawing(): void;
         protected _getValue(propertyName: string, defaultValue: any): any;
+        protected abstract _copyMembersValues(destination: VgxEntity): void;
         abstract getBounds(): Rect;
         get drawing(): Drawing;
         get handle(): string;
@@ -544,6 +566,7 @@ declare namespace Vgx {
         private _geometryDirty;
         private _positionDirty;
         constructor();
+        protected _copyMembersValues(destination: VgxEntity): void;
         draw(drawingContext: DrawingContext): void;
         get appearanceDirty(): boolean;
         set appearanceDirty(v: boolean);
@@ -557,6 +580,7 @@ declare namespace Vgx {
 }
 declare namespace Vgx {
     abstract class VgxEntity extends VgxDrawable {
+        private _id;
         private _insertPointX;
         private _insertPointY;
         private _stroke;
@@ -565,6 +589,8 @@ declare namespace Vgx {
         private _transform;
         private _cachedBounds;
         constructor();
+        private _cloneBrushDefinition;
+        protected _copyMembersValues(destination: VgxEntity): void;
         protected _getVertices(): {
             x: any;
             y: any;
@@ -572,7 +598,10 @@ declare namespace Vgx {
         protected _getBounds(): Rect;
         loadData(data: DynamicObject): void;
         abstract _getPath(): Path2D;
+        clone(): any;
         getBounds(): Rect;
+        get id(): string;
+        set id(v: string);
         get insertPointX(): number;
         set insertPointX(v: number);
         get insertPointY(): number;
@@ -596,6 +625,7 @@ declare namespace Vgx {
         private _isAntiClockwise;
         constructor();
         protected _getBounds(): Rect;
+        protected _copyMembersValues(destination: VgxEntity): void;
         _getPath(): Path2D;
         get radius(): number;
         set radius(v: number);
@@ -615,6 +645,7 @@ declare namespace Vgx {
 declare namespace Vgx {
     abstract class VgxFillableEntity extends VgxEntity implements VgxFillable {
         private _fill;
+        constructor();
         get fill(): BrushDefinition;
         set fill(v: BrushDefinition);
     }
@@ -624,6 +655,7 @@ declare namespace Vgx {
         private _radius;
         constructor();
         protected _getBounds(): Rect;
+        protected _copyMembersValues(destination: VgxEntity): void;
         _getPath(): Path2D;
         get radius(): number;
         set radius(v: number);
@@ -638,6 +670,7 @@ declare namespace Vgx {
         private _bounds;
         constructor();
         protected _getBounds(): Rect;
+        protected _copyMembersValues(destination: VgxEntity): void;
         private updateBounds;
         loadData(data: DynamicObject): void;
         _getPath(): Path2D;
@@ -659,6 +692,7 @@ declare namespace Vgx {
         private _isAntiClockwise;
         constructor();
         protected _getBounds(): Rect;
+        protected _copyMembersValues(destination: VgxEntity): void;
         _getPath(): Path2D;
         get startRadius(): number;
         set startRadius(v: number);
@@ -772,6 +806,7 @@ declare namespace Vgx {
         private createNewFigure;
         private ensureHasFigure;
         protected _getBounds(): Rect;
+        protected _copyMembersValues(destination: VgxEntity): void;
         private updateBounds;
         loadData(data: DynamicObject): void;
         _getPath(): Path2D;
@@ -976,6 +1011,60 @@ declare namespace Vgx {
     }
 }
 declare namespace Vgx {
+    interface DrawingNodeEntityVisibilityChangedEventArgs extends EventArgs {
+        get originalSource(): DrawingNode;
+        get hidden(): boolean;
+    }
+    class DrawingNode {
+        private _events;
+        private _hidden;
+        private _parentHidden;
+        private _isExpanded;
+        private _htmlElement;
+        private _htmlHeader;
+        private _htmlHeaderExpander;
+        private _htmlHeaderText;
+        private _htmlHeaderButtons;
+        private _htmlChildren;
+        private _entity;
+        private _children;
+        private _parent;
+        onEntityVisibilityStateChanged: EventSet<DrawingNode, DrawingNodeEntityVisibilityChangedEventArgs>;
+        constructor();
+        private _buildExpander;
+        private _buildButtons;
+        private _loadEntity;
+        private _updateVisibilityVisualState;
+        private _toggleVisible;
+        private _setVisualHidden;
+        private _setVisualVisible;
+        _setParent(parentNode: DrawingNode): void;
+        private _expandCollapseButtonClick;
+        private _showHideButtonClick;
+        private _parentNodeEntityVisibilityStateChanged;
+        get htmlElement(): HTMLElement;
+        get entity(): VgxEntity;
+        set entity(v: VgxEntity);
+        get hidden(): boolean;
+        set hidden(v: boolean);
+        addChild(node: DrawingNode): void;
+    }
+}
+declare namespace Vgx {
+    class DrawingStructureView {
+        private _htmlElement;
+        private _htmlContent;
+        private _drawing;
+        constructor();
+        private _onDrawingChildrenChanged;
+        private _loadEntityNode;
+        private _loadDrawingStructure;
+        get htmlElement(): HTMLElement;
+        get drawing(): Drawing;
+        attachToDrawing(drawing: Drawing): void;
+    }
+}
+declare namespace Vgx {
     interface ViewportsLayoutChangedEventArgs extends EventArgs {
         layout: ViewportsLayout;
     }
@@ -991,6 +1080,7 @@ declare namespace Vgx {
         private _neverArranged;
         constructor();
         private _arrangeLayout;
+        private _addViewportSpacer;
         private _addNewViewport;
         private _addViewport;
         private _removeLastViewport;
@@ -1172,6 +1262,17 @@ declare namespace SampleApps {
     }
 }
 declare namespace SampleApps {
+    class SvgLoadApp {
+        static start(): void;
+        private _canvas;
+        private _viewTransform;
+        private _drawingContext;
+        constructor();
+        private _resolveImporter;
+        private _loadSvg;
+    }
+}
+declare namespace SampleApps {
     class TestBoundsApp {
         static start(): void;
     }
@@ -1194,8 +1295,10 @@ declare namespace SampleApps {
     class ViewerApp {
         static start(): void;
         private _menuBar;
-        private _mainView;
+        private _contentView;
+        private _sideView;
         private _vectorGraphicsView;
+        private _drawingStructureView;
         private _selectDrawing;
         private _selectBackground;
         private _selectViewports;
@@ -1204,6 +1307,8 @@ declare namespace SampleApps {
         private _initializeUI;
         private _fillSelectInputs;
         private _onWindowResize;
+        private _loadOptionDrawing;
+        private _readHash;
         private _onViewportsLayoutChanged;
         private _addViewportMenu;
         private _resolveImporter;

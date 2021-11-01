@@ -24,6 +24,14 @@ namespace Vgx {
 			return this._bounds;
 		}
 
+		// override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			super._copyMembersValues(destination);
+			(destination as VgxCubicCurve).isClosed = this.isClosed;
+			(destination as VgxCubicCurve).points.addRange(this.points.toArray());
+			(destination as VgxCubicCurve).controlPoints1.addRange(this.controlPoints1.toArray());
+			(destination as VgxCubicCurve).controlPoints2.addRange(this.controlPoints2.toArray());
+		}
 
 		private updateBounds() {
 			let minX = Number.MAX_VALUE;
@@ -66,6 +74,13 @@ namespace Vgx {
 			return null;
 		}
 
+		// //abstract override
+		// public clone() {
+		// 	const result = new VgxCubicCurve();
+		// 	this._copyMembersValues(result);
+		// 	return result;
+		// }
+
 		public get points() { return this._points; }
 		public get controlPoints1() { return this._controlPoints1; }
 		public get controlPoints2() { return this._controlPoints2; }
@@ -77,5 +92,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("CubicCurve", "Vgx.VgxCubicCurve");
+	EntityTypeManager.registerType("CubicCurve", VgxCubicCurve);
 }

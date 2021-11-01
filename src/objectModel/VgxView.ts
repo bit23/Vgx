@@ -11,8 +11,16 @@ namespace Vgx {
 
 		constructor() {
 			super();
+			this.fill = "transparent";
 			this._children = new VgxEntityCollection(this);
 			this._children.onCollectionChanged.add(this._onChildrenChanged, this);
+
+			this._children.onCollectionChanged.add((s, e) => {
+				for (const item of e.items) {
+					item._setParent(this);
+				}
+				this.updateBounds();
+			});
 		}
 
 
@@ -79,5 +87,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("View", "Vgx.VgxView");
+	EntityTypeManager.registerType("View", VgxView);
 }

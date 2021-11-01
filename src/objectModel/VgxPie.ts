@@ -97,5 +97,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Pie", "Vgx.VgxPie");
+	EntityTypeManager.registerType("Pie", VgxPie);
 }

@@ -285,9 +285,9 @@ namespace Vgx {
 			this._graphics.fillBrush = group.fill;
 			this._graphics.shadow = group.shadow;
 
-			var t = new Cgx.Transform();
-			t.translationX = group.insertPointX;
-			t.translationY = group.insertPointY;
+			var t = group.transform.clone();
+			t.translationX += group.insertPointX;
+			t.translationY += group.insertPointY;
 			this._graphics.pushTransform(t);
 
 			// for (const child of group.children) {
@@ -320,17 +320,11 @@ namespace Vgx {
 				this._graphics.clipRect(view.clipBounds.x, view.clipBounds.y, view.clipBounds.width, view.clipBounds.height);
 			}
 
-			// for (const child of view.children) {
-			// 	if (<VgxDrawable>child) {
-			// 		if ((<VgxDrawable>child).visible) {
-			// 			(<VgxDrawable>child).draw(this);
-			// 		}
-			// 	}
-			// }
 			this._drawEntityCollection(view.children);
 
 			if (hasClipBounds)
 			{
+				this._graphics.fillBrush = "transparent";
 				this._graphics.strokeBrush = view.stroke;
 				this.strokeWidth = view.strokeWidth;
 				this._graphics.drawRectangle(view.clipBounds.x, view.clipBounds.y, view.clipBounds.width, view.clipBounds.height);

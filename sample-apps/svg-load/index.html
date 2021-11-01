@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+
+    <script src="../../libs/cgx/cgx.js"></script>
+    <script src="../../dist/vgx.js"></script>
+
+    <style>
+        html {
+            padding: 0;
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /*canvas {
+            display: block;
+            margin: auto;
+            width: 29.7cm;
+            height: 21cm;
+            background-color: #fff;
+            outline: 1px solid #bbb;
+        }*/
+    </style>
+	<script>
+        window.addEventListener("DOMContentLoaded", () => {
+            SampleApps.SvgLoadApp.start();
+        });
+    </script>
+</head>
+    <body>
+        <canvas id="renderCanvas" width="1123" height="794"></canvas>
+    </body>
+</html>

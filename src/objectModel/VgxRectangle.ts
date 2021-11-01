@@ -54,5 +54,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Rectangle", "Vgx.VgxRectangle");
+	EntityTypeManager.registerType("Rectangle", VgxRectangle);
 }

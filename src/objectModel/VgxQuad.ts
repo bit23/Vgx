@@ -86,5 +86,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Quad", "Vgx.VgxQuad");
+	EntityTypeManager.registerType("Quad", VgxQuad);
 }

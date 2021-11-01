@@ -16,6 +16,12 @@ namespace Vgx {
 		}
 
 
+		// abstract override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			destination._visible = this._visible;
+		}
+
+
 		// @virtual
 		public draw(drawingContext: DrawingContext) { }
 

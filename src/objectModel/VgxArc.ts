@@ -32,6 +32,17 @@ namespace Vgx {
 			return new Rect(this.insertPointX + x1, this.insertPointY + y1, x2 - x1, y2 - y1);
 		}
 
+		// override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			super._copyMembersValues(destination);
+			(destination as VgxArc)._radius = this._radius;
+			(destination as VgxArc)._startAngle = this._startAngle;
+			(destination as VgxArc)._startAngleRad = this._startAngleRad;
+			(destination as VgxArc)._endAngle = this._endAngle;
+			(destination as VgxArc)._endAngleRad = this._endAngleRad;
+			(destination as VgxArc)._isAntiClockwise = this._isAntiClockwise;
+		}
+
 
 		//abstract override
 		public _getPath(): Path2D {
@@ -98,5 +109,6 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Arc", "Vgx.VgxArc");
+	//EntityTypeManager.registerType("Arc", "Vgx.VgxArc");
+	EntityTypeManager.registerType("Arc", VgxArc);
 }

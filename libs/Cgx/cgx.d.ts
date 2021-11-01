@@ -46,6 +46,7 @@ declare namespace Cgx {
     type BrushType = "linear" | "radial" | "pattern";
     abstract class Brush {
         abstract readonly brushType: BrushType;
+        abstract clone(): Brush;
     }
     abstract class GradientBrush extends Brush {
         protected _colorStops: Array<{
@@ -64,6 +65,7 @@ declare namespace Cgx {
         y0: number;
         x1: number;
         y1: number;
+        clone(): LinearGradientBrush;
     }
     class RadialGradientBrush extends GradientBrush {
         readonly brushType: BrushType;
@@ -73,11 +75,13 @@ declare namespace Cgx {
         x1: number;
         y1: number;
         r1: number;
+        clone(): RadialGradientBrush;
     }
     class PatternBrush extends Brush {
         readonly brushType: BrushType;
         image: HTMLImageElement;
         repetition: string;
+        clone(): PatternBrush;
     }
 }
 declare namespace Cgx {
@@ -789,6 +793,7 @@ declare namespace Cgx {
         private _scaleY;
         private _rotation;
         protected _propertyChanged: (propertyName: string) => void;
+        clone(): Transform;
         get originX(): number;
         set originX(v: number);
         get originY(): number;

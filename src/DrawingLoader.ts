@@ -21,21 +21,23 @@ namespace Vgx {
 
 		private static getVgxType(entityName: string) {
 			let vgxNs = Vgx as any;
-			const entityTypeDefinition = EntityTypeManager.getType(entityName);
+			const entityTypeDefinition = EntityTypeManager.getByName(entityName);
 			if (entityTypeDefinition == null) {
 				return null;
 			}
+
+			return entityTypeDefinition.ctor;
 			
-			const nsparts = entityTypeDefinition.typeName.split(".");
-			const typeName = nsparts[nsparts.length - 1];
-			let ns = vgxNs;
-			if (nsparts.length > 1) {
-				ns = DrawingLoader.resolveNamespace(nsparts.slice(0, nsparts.length - 1));
-				if (ns == null) {
-					return null;
-				}
-			}
-			return Reflect.get(ns, typeName);
+			// const nsparts = entityTypeDefinition.typeName.split(".");
+			// const typeName = nsparts[nsparts.length - 1];
+			// let ns = vgxNs;
+			// if (nsparts.length > 1) {
+			// 	ns = DrawingLoader.resolveNamespace(nsparts.slice(0, nsparts.length - 1));
+			// 	if (ns == null) {
+			// 		return null;
+			// 	}
+			// }
+			// return Reflect.get(ns, typeName);
 		}
 
 		private static loadCustomEntities(jsonCustomEntities: DynamicObject) {
@@ -52,7 +54,7 @@ namespace Vgx {
 
 		public static loadChildEntity(typeName: string, data: DynamicObject) {
 
-			const type = DrawingLoader.getVgxType(typeName);
+			const type = DrawingLoader.getVgxType(typeName) as any;
 
 			if (typeof type !== "function") {
 				throw new Error("invalid type name '" + typeName + "'");

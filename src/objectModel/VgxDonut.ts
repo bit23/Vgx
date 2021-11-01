@@ -33,12 +33,30 @@ namespace Vgx {
 			return new Rect(this.insertPointX + x1, this.insertPointY + y1, x2 - x1, y2 - y1);
 		}
 
+		// override
+		protected _copyMembersValues(destination: VgxEntity): void {
+			super._copyMembersValues(destination);
+			(destination as VgxDonut)._startRadius = this._startRadius;
+			(destination as VgxDonut)._endRadius = this._endRadius;
+			(destination as VgxDonut)._startAngle = this._startAngle;
+			(destination as VgxDonut)._startAngleRad = this._startAngleRad;
+			(destination as VgxDonut)._endAngle = this._endAngle;
+			(destination as VgxDonut)._endAngleRad = this._endAngleRad;
+			(destination as VgxDonut)._isAntiClockwise = this._isAntiClockwise;
+		}
 
 		//abstract override
 		public _getPath(): Path2D {
 			// TODO
 			return null;
 		}
+
+		// //abstract override
+		// public clone() {
+		// 	const result = new VgxDonut();
+		// 	this._copyMembersValues(result);
+		// 	return result;
+		// }
 
 
 		public get startRadius() { return this._startRadius; }
@@ -107,5 +125,5 @@ namespace Vgx {
 		}
 	}
 	
-	EntityTypeManager.registerType("Donut", "Vgx.VgxDonut");
+	EntityTypeManager.registerType("Donut", VgxDonut);
 }

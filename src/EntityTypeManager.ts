@@ -6,7 +6,8 @@ namespace Vgx {
 
 	interface EntityTypeDefinition {
 		name: string;
-		typeName: string;
+		ctor: Function;
+		//typeName: string;
 		defaultValues: DynamicObject;
 	}
 
@@ -14,16 +15,23 @@ namespace Vgx {
 
 		private static _registeredTypes: DictionaryObject<string, EntityTypeDefinition> = new DictionaryObject();
 
-
-		public static registerType(name: string, typeName: string, defaultValues: DynamicObject = null) {
+		public static registerType(name: string, ctor: Function, defaultValues: DynamicObject = null) {
 			if (this._registeredTypes.containsKey(name)) {
 				throw new Error(`type '${name}' already defined`);
 			}
-			const definition = { name, typeName, defaultValues };
+			const definition = { name, ctor, defaultValues };
 			this._registeredTypes.set(name, definition);
 		}
 
-		public static getType(name: string, throwException: boolean = false) {
+		// public static registerType(name: string, typeName: string, defaultValues: DynamicObject = null) {
+		// 	if (this._registeredTypes.containsKey(name)) {
+		// 		throw new Error(`type '${name}' already defined`);
+		// 	}
+		// 	const definition = { name, typeName, defaultValues };
+		// 	this._registeredTypes.set(name, definition);
+		// }
+
+		public static getByName(name: string, throwException: boolean = false) {
 			if (!this._registeredTypes.containsKey(name)) {
 				if (throwException) {
 					throw new Error(`type '${name}' doesn't exists`);
@@ -32,6 +40,15 @@ namespace Vgx {
 				}
 			}
 			return this._registeredTypes.get(name);
+		}
+
+		public static getByTypeConstructor(ctor: Function, throwException: boolean = false) {
+			for (const entry of this._registeredTypes) {
+				if (entry.value.ctor === ctor) {
+					return entry;
+				}
+			}
+			return null;
 		}
 	}
 }
